@@ -554,6 +554,8 @@ LIMIT 20;
 
 ### Triggers for Updated Timestamp
 
+**Note**: These triggers are optional enhancements. The main schema includes `DEFAULT CURRENT_TIMESTAMP` for `updated_at` fields, which covers inserts. These triggers automatically update the timestamp on record updates. Add them to your schema if you want automatic timestamp updates.
+
 ```sql
 -- Trigger to update users.updated_at
 CREATE TRIGGER IF NOT EXISTS update_users_timestamp 

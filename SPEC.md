@@ -130,7 +130,7 @@ SplitDumb is a web application that replicates the basic functionality of Splitw
     "id": "uuid",
     "group_id": "uuid (foreign key -> Group)",
     "description": "string",
-    "amount": "decimal",
+    "amount": "float",  # Stored as REAL in SQLite
     "currency": "string (default: USD)",
     "payer_id": "uuid (foreign key -> User)",
     "category": "string (optional)",
@@ -147,8 +147,8 @@ SplitDumb is a web application that replicates the basic functionality of Splitw
     "id": "uuid",
     "expense_id": "uuid (foreign key -> Expense)",
     "user_id": "uuid (foreign key -> User)",
-    "amount": "decimal",
-    "percentage": "decimal (optional)",
+    "amount": "float",  # Stored as REAL in SQLite
+    "percentage": "float (optional)",  # Stored as REAL in SQLite
     "shares": "integer (optional)"
 }
 ```
@@ -160,7 +160,7 @@ SplitDumb is a web application that replicates the basic functionality of Splitw
     "group_id": "uuid (foreign key -> Group)",
     "payer_id": "uuid (foreign key -> User)",
     "payee_id": "uuid (foreign key -> User)",
-    "amount": "decimal",
+    "amount": "float",  # Stored as REAL in SQLite
     "currency": "string (default: USD)",
     "notes": "string (optional)",
     "date": "date",
