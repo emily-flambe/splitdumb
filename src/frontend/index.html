@@ -53,6 +53,25 @@
       </div>
     </section>
 
+    <!-- Admin View -->
+    <section id="admin-view" class="view">
+      <header class="trip-header">
+        <div class="header-top">
+          <button id="admin-back-btn" class="icon-btn" aria-label="Back to home">←</button>
+          <h1 class="trip-title">Admin Panel</h1>
+          <div></div>
+        </div>
+      </header>
+      <div class="trip-content">
+        <section class="section">
+          <h2>All Trips</h2>
+          <div id="admin-trips-list" class="admin-trips-list">
+            <div class="loading-state">Loading trips...</div>
+          </div>
+        </section>
+      </div>
+    </section>
+
     <!-- Trip View -->
     <section id="trip-view" class="view">
       <header class="trip-header">
@@ -148,6 +167,19 @@
         </section>
       </div>
     </section>
+  </div>
+
+  <!-- Modal Overlay -->
+  <div id="modal-overlay" class="modal-overlay" style="display: none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-title">Modal</h2>
+        <button id="modal-close" class="icon-btn" aria-label="Close">×</button>
+      </div>
+      <div id="modal-content" class="modal-content">
+        <!-- Dynamic content -->
+      </div>
+    </div>
   </div>
 
   <script type="module" src="./app.ts"></script>

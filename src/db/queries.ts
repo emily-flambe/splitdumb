@@ -45,6 +45,13 @@ export async function createTrip(
   return { trip, password };
 }
 
+export async function getAllTrips(db: D1Database): Promise<Trip[]> {
+  const result = await db.prepare(
+    'SELECT * FROM trips ORDER BY created_at DESC'
+  ).all<Trip>();
+  return result.results || [];
+}
+
 export async function getTripBySlug(db: D1Database, slug: string): Promise<Trip | null> {
   return db.prepare('SELECT * FROM trips WHERE slug = ?').bind(slug).first<Trip>();
 }

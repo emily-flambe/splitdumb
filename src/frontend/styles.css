@@ -672,3 +672,178 @@ select:focus {
   outline: 2px solid var(--accent-teal);
   outline-offset: 2px;
 }
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--space-md);
+}
+
+.modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  max-width: 450px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: fadeSlideIn 0.3s ease;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.modal-content {
+  padding: var(--space-lg);
+}
+
+.modal-content p {
+  margin: 0 0 var(--space-md);
+  color: var(--text-secondary);
+}
+
+.credential-display {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+  font-family: monospace;
+  font-size: 1rem;
+  word-break: break-all;
+}
+
+.credential-display .label {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-xs);
+  font-family: var(--font-sans);
+}
+
+.credential-display .value {
+  color: var(--accent-teal);
+  font-weight: 600;
+}
+
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
+}
+
+.modal-actions .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.settings-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-md);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-sm);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.settings-option:hover {
+  border-color: var(--accent-teal);
+}
+
+.settings-option .option-info h3 {
+  margin: 0 0 var(--space-xs);
+  font-size: 1rem;
+}
+
+.settings-option .option-info p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.settings-option .arrow {
+  color: var(--text-muted);
+  font-size: 1.25rem;
+}
+
+.settings-option.danger {
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.settings-option.danger:hover {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.settings-option.danger h3 {
+  color: #ef4444;
+}
+
+/* Admin View Styles */
+.admin-trips-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.admin-trip-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+}
+
+.admin-trip-card h3 {
+  margin: 0 0 var(--space-xs);
+  font-size: 1.125rem;
+}
+
+.admin-trip-card .trip-slug {
+  color: var(--accent-teal);
+  font-family: monospace;
+  font-size: 0.875rem;
+  margin-bottom: var(--space-sm);
+}
+
+.admin-trip-card .trip-meta {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  margin-bottom: var(--space-md);
+}
+
+.admin-trip-actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.admin-trip-actions .btn {
+  flex: 1;
+  min-width: 100px;
+}

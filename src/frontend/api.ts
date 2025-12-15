@@ -145,16 +145,26 @@ export async function getTrip(slug: string): Promise<TripWithParticipants> {
 
 export async function updateTrip(
   slug: string,
-  name: string
+  updates: { name?: string; password?: string }
 ): Promise<Omit<TripWithParticipants, 'participants'>> {
-  return apiFetch<Omit<TripWithParticipants, 'participants'>>(
+  const result = await apiFetch<Omit<TripWithParticipants, 'participants'>>(
     `/api/trips/${slug}`,
     {
       method: 'PUT',
-      body: JSON.stringify({ name }),
+      body: JSON.stringify(updates),
     },
     true
   );
+
+  // If password was changed, update stored credentials
+  if (updates.password) {
+    const credentials = getCredentials();
+    if (credentials && credentials.slug === slug) {
+      saveCredentials(slug, updates.password);
+    }
+  }
+
+  return result;
 }
 
 export async function deleteTrip(slug: string): Promise<{ success: true; message: string }> {

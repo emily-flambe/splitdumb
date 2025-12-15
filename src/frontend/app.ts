@@ -4,6 +4,8 @@ import {
   createTrip,
   authTrip,
   getTrip,
+  updateTrip,
+  deleteTrip,
   addParticipant,
   deleteParticipant,
   createExpense,
@@ -11,18 +13,30 @@ import {
   getExpenses,
   getBalances,
   getCredentials,
+  saveCredentials,
   clearCredentials,
   ApiError,
 } from './api';
 
+// Admin types
+interface AdminTrip {
+  id: number;
+  slug: string;
+  name: string;
+  created_at: number;
+  updated_at: number;
+}
+
 // State management
 interface AppState {
-  currentView: 'landing' | 'trip';
+  currentView: 'landing' | 'trip' | 'admin';
   currentSlug: string | null;
   trip: TripWithParticipants | null;
   expenses: ExpenseWithSplits[];
   balances: Balance[];
   loading: boolean;
+  adminPassword: string | null;
+  adminTrips: AdminTrip[];
 }
 
 const state: AppState = {
@@ -32,11 +46,16 @@ const state: AppState = {
   expenses: [],
   balances: [],
   loading: false,
+  adminPassword: null,
+  adminTrips: [],
 };
 
 // DOM Elements
 const landingView = document.getElementById('landing') as HTMLElement;
 const tripView = document.getElementById('trip-view') as HTMLElement;
+const adminView = document.getElementById('admin-view') as HTMLElement;
+const adminBackBtn = document.getElementById('admin-back-btn') as HTMLButtonElement;
+const adminTripsList = document.getElementById('admin-trips-list') as HTMLDivElement;
 const createTripBtn = document.getElementById('create-trip-btn') as HTMLButtonElement;
 const joinForm = document.getElementById('join-form') as HTMLFormElement;
 const tripSlugInput = document.getElementById('trip-slug') as HTMLInputElement;
@@ -58,6 +77,12 @@ const customSplitInputs = document.getElementById('custom-split-inputs') as HTML
 const expensesList = document.getElementById('expenses-list') as HTMLUListElement;
 const balancesList = document.getElementById('balances-list') as HTMLDivElement;
 
+// Modal elements
+const modalOverlay = document.getElementById('modal-overlay') as HTMLDivElement;
+const modalTitle = document.getElementById('modal-title') as HTMLHeadingElement;
+const modalContent = document.getElementById('modal-content') as HTMLDivElement;
+const modalClose = document.getElementById('modal-close') as HTMLButtonElement;
+
 // Routing
 function navigateTo(path: string) {
   window.history.pushState({}, '', path);
@@ -69,6 +94,19 @@ function handleRoute() {
 
   if (path === '/') {
     showLandingView();
+  } else if (path === '/admin') {
+    // Prompt for admin password if not already authenticated
+    if (!state.adminPassword) {
+      const password = prompt('Enter admin password:');
+      if (!password) {
+        navigateTo('/');
+        return;
+      }
+      // Verify admin password
+      verifyAdminPassword(password);
+    } else {
+      showAdminView();
+    }
   } else {
     const slug = path.slice(1); // Remove leading slash
     if (slug) {
@@ -79,10 +117,33 @@ function handleRoute() {
   }
 }
 
+async function verifyAdminPassword(password: string) {
+  try {
+    const response = await fetch('/api/admin/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+
+    if (response.ok) {
+      state.adminPassword = password;
+      showAdminView();
+    } else {
+      alert('Invalid admin password');
+      navigateTo('/');
+    }
+  } catch (error) {
+    alert('Failed to verify admin password');
+    navigateTo('/');
+  }
+}
+
 function showLandingView() {
   state.currentView = 'landing';
+  state.currentSlug = null;
   landingView.classList.add('active');
   tripView.classList.remove('active');
+  adminView.classList.remove('active');
 }
 
 function showTripView(slug: string) {
@@ -90,7 +151,17 @@ function showTripView(slug: string) {
   state.currentSlug = slug;
   landingView.classList.remove('active');
   tripView.classList.add('active');
+  adminView.classList.remove('active');
   loadTripData(slug);
+}
+
+function showAdminView() {
+  state.currentView = 'admin';
+  state.currentSlug = null;
+  landingView.classList.remove('active');
+  tripView.classList.remove('active');
+  adminView.classList.add('active');
+  loadAdminData();
 }
 
 // Landing page handlers
@@ -100,7 +171,12 @@ async function handleCreateTrip() {
 
   try {
     const result = await createTrip(tripName.trim());
+    // Navigate to trip and show credentials modal
     navigateTo(`/${result.slug}`);
+    // Show credentials after a short delay to let the trip view load
+    setTimeout(() => {
+      showCredentialsModal(result.slug, result.password, true);
+    }, 500);
   } catch (error) {
     if (error instanceof ApiError) {
       alert(`Failed to create trip: ${error.message}`);
@@ -453,17 +529,321 @@ Password: ${credentials.password}
 }
 
 function handleSettings() {
-  if (!state.currentSlug || !state.trip) return;
+  showSettingsModal();
+}
 
-  const action = confirm(
-    'Delete this trip? This cannot be undone.\n\nClick OK to delete, Cancel to go back.'
+// Admin functions
+async function loadAdminData() {
+  if (!state.adminPassword) return;
+
+  try {
+    const response = await fetch('/api/admin/trips', {
+      headers: { 'X-Admin-Password': state.adminPassword },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        state.adminPassword = null;
+        navigateTo('/');
+        return;
+      }
+      throw new Error('Failed to load trips');
+    }
+
+    state.adminTrips = await response.json();
+    renderAdminTrips();
+  } catch (error) {
+    alert('Failed to load admin data');
+    console.error(error);
+  }
+}
+
+function renderAdminTrips() {
+  if (state.adminTrips.length === 0) {
+    adminTripsList.innerHTML = '<div class="empty-state">No trips found</div>';
+    return;
+  }
+
+  adminTripsList.innerHTML = state.adminTrips
+    .map((trip) => {
+      const createdDate = new Date(trip.created_at * 1000).toLocaleDateString();
+      return `
+        <div class="admin-trip-card" data-slug="${escapeHtml(trip.slug)}">
+          <h3>${escapeHtml(trip.name)}</h3>
+          <div class="trip-slug">${escapeHtml(trip.slug)}</div>
+          <div class="trip-meta">Created: ${createdDate}</div>
+          <div class="admin-trip-actions">
+            <button class="btn btn-secondary btn-small admin-rename" data-slug="${escapeHtml(trip.slug)}">Rename</button>
+            <button class="btn btn-secondary btn-small admin-password" data-slug="${escapeHtml(trip.slug)}">Change Password</button>
+            <button class="btn btn-secondary btn-small admin-delete" data-slug="${escapeHtml(trip.slug)}" style="color: #ef4444;">Delete</button>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
+  // Add event listeners
+  adminTripsList.querySelectorAll('.admin-rename').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      const slug = (e.target as HTMLElement).dataset.slug;
+      if (slug) handleAdminRename(slug);
+    });
+  });
+
+  adminTripsList.querySelectorAll('.admin-password').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      const slug = (e.target as HTMLElement).dataset.slug;
+      if (slug) handleAdminChangePassword(slug);
+    });
+  });
+
+  adminTripsList.querySelectorAll('.admin-delete').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      const slug = (e.target as HTMLElement).dataset.slug;
+      if (slug) handleAdminDelete(slug);
+    });
+  });
+}
+
+async function handleAdminRename(slug: string) {
+  if (!state.adminPassword) return;
+
+  const trip = state.adminTrips.find((t) => t.slug === slug);
+  const newName = prompt('Enter new trip name:', trip?.name || '');
+  if (!newName?.trim()) return;
+
+  try {
+    const response = await fetch(`/api/admin/trips/${slug}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Password': state.adminPassword,
+      },
+      body: JSON.stringify({ name: newName.trim() }),
+    });
+
+    if (!response.ok) throw new Error('Failed to rename trip');
+
+    await loadAdminData();
+  } catch (error) {
+    alert('Failed to rename trip');
+    console.error(error);
+  }
+}
+
+async function handleAdminChangePassword(slug: string) {
+  if (!state.adminPassword) return;
+
+  const newPassword = prompt('Enter new password for this trip:');
+  if (!newPassword?.trim()) return;
+
+  try {
+    const response = await fetch(`/api/admin/trips/${slug}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Password': state.adminPassword,
+      },
+      body: JSON.stringify({ password: newPassword.trim() }),
+    });
+
+    if (!response.ok) throw new Error('Failed to change password');
+
+    alert('Password updated successfully!');
+  } catch (error) {
+    alert('Failed to change password');
+    console.error(error);
+  }
+}
+
+async function handleAdminDelete(slug: string) {
+  if (!state.adminPassword) return;
+
+  const confirmed = confirm(`Are you sure you want to delete trip "${slug}"?\n\nThis cannot be undone.`);
+  if (!confirmed) return;
+
+  try {
+    const response = await fetch(`/api/admin/trips/${slug}`, {
+      method: 'DELETE',
+      headers: { 'X-Admin-Password': state.adminPassword },
+    });
+
+    if (!response.ok) throw new Error('Failed to delete trip');
+
+    await loadAdminData();
+  } catch (error) {
+    alert('Failed to delete trip');
+    console.error(error);
+  }
+}
+
+// Modal functions
+function showModal(title: string, content: string) {
+  modalTitle.textContent = title;
+  modalContent.innerHTML = content;
+  modalOverlay.style.display = 'flex';
+}
+
+function hideModal() {
+  modalOverlay.style.display = 'none';
+}
+
+function showCredentialsModal(slug: string, password: string, isNewTrip = false) {
+  const title = isNewTrip ? 'Trip Created!' : 'Trip Credentials';
+  const intro = isNewTrip
+    ? '<p>Share these credentials with your friends so they can join:</p>'
+    : '<p>Your trip credentials:</p>';
+
+  showModal(
+    title,
+    `
+    ${intro}
+    <div class="credential-display">
+      <div class="label">Trip Code</div>
+      <div class="value">${escapeHtml(slug)}</div>
+    </div>
+    <div class="credential-display">
+      <div class="label">Password</div>
+      <div class="value">${escapeHtml(password)}</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="copy-credentials-btn">Copy Share Message</button>
+      <button class="btn btn-secondary" id="close-credentials-btn">${isNewTrip ? 'Continue to Trip' : 'Close'}</button>
+    </div>
+  `
   );
 
-  if (action) {
-    // Note: deleteTrip functionality would need to be implemented
-    // For now, just redirect to landing
-    clearCredentials();
+  document.getElementById('copy-credentials-btn')?.addEventListener('click', () => {
+    const shareMessage = `Join my trip on SplitDumb!
+
+splitdumb.emilycogsdill.com/${slug}
+Password: ${password}
+
+(it's super secure don't worry)`;
+
+    navigator.clipboard.writeText(shareMessage).then(() => {
+      const btn = document.getElementById('copy-credentials-btn');
+      if (btn) {
+        btn.textContent = 'Copied!';
+        setTimeout(() => {
+          btn.textContent = 'Copy Share Message';
+        }, 2000);
+      }
+    });
+  });
+
+  document.getElementById('close-credentials-btn')?.addEventListener('click', hideModal);
+}
+
+function showSettingsModal() {
+  if (!state.trip || !state.currentSlug) return;
+
+  showModal(
+    'Trip Settings',
+    `
+    <div class="settings-option" id="settings-rename">
+      <div class="option-info">
+        <h3>Rename Trip</h3>
+        <p>Change the name of this trip</p>
+      </div>
+      <span class="arrow">→</span>
+    </div>
+    <div class="settings-option" id="settings-password">
+      <div class="option-info">
+        <h3>Change Password</h3>
+        <p>Set a new password for this trip</p>
+      </div>
+      <span class="arrow">→</span>
+    </div>
+    <div class="settings-option" id="settings-view-credentials">
+      <div class="option-info">
+        <h3>View Credentials</h3>
+        <p>See trip code and password</p>
+      </div>
+      <span class="arrow">→</span>
+    </div>
+    <div class="settings-option danger" id="settings-delete">
+      <div class="option-info">
+        <h3>Delete Trip</h3>
+        <p>Permanently delete this trip and all data</p>
+      </div>
+      <span class="arrow">→</span>
+    </div>
+  `
+  );
+
+  document.getElementById('settings-rename')?.addEventListener('click', handleRenameTripSetting);
+  document.getElementById('settings-password')?.addEventListener('click', handleChangePasswordSetting);
+  document.getElementById('settings-view-credentials')?.addEventListener('click', handleViewCredentialsSetting);
+  document.getElementById('settings-delete')?.addEventListener('click', handleDeleteTripSetting);
+}
+
+async function handleRenameTripSetting() {
+  if (!state.currentSlug || !state.trip) return;
+
+  const newName = prompt('Enter new trip name:', state.trip.name);
+  if (!newName?.trim() || newName.trim() === state.trip.name) return;
+
+  try {
+    await updateTrip(state.currentSlug, { name: newName.trim() });
+    await loadTripData(state.currentSlug);
+    hideModal();
+  } catch (error) {
+    if (error instanceof ApiError) {
+      alert(`Failed to rename trip: ${error.message}`);
+    } else {
+      alert('Failed to rename trip. Please try again.');
+    }
+  }
+}
+
+async function handleChangePasswordSetting() {
+  if (!state.currentSlug) return;
+
+  const newPassword = prompt('Enter new password:');
+  if (!newPassword?.trim()) return;
+
+  try {
+    await updateTrip(state.currentSlug, { password: newPassword.trim() });
+    alert('Password updated successfully!');
+    hideModal();
+  } catch (error) {
+    if (error instanceof ApiError) {
+      alert(`Failed to change password: ${error.message}`);
+    } else {
+      alert('Failed to change password. Please try again.');
+    }
+  }
+}
+
+function handleViewCredentialsSetting() {
+  const credentials = getCredentials();
+  if (!credentials) {
+    alert('Credentials not found');
+    return;
+  }
+  showCredentialsModal(credentials.slug, credentials.password, false);
+}
+
+async function handleDeleteTripSetting() {
+  if (!state.currentSlug) return;
+
+  const confirmed = confirm(
+    'Are you sure you want to delete this trip?\n\nThis will permanently delete all participants, expenses, and data. This cannot be undone.'
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await deleteTrip(state.currentSlug);
+    hideModal();
     navigateTo('/');
+  } catch (error) {
+    if (error instanceof ApiError) {
+      alert(`Failed to delete trip: ${error.message}`);
+    } else {
+      alert('Failed to delete trip. Please try again.');
+    }
   }
 }
 
@@ -482,6 +862,18 @@ shareBtn.addEventListener('click', handleShareTrip);
 settingsBtn.addEventListener('click', handleSettings);
 addParticipantBtn.addEventListener('click', handleAddParticipant);
 expenseForm.addEventListener('submit', handleAddExpense);
+
+// Modal event listeners
+modalClose.addEventListener('click', hideModal);
+modalOverlay.addEventListener('click', (e) => {
+  if (e.target === modalOverlay) hideModal();
+});
+
+// Admin event listeners
+adminBackBtn.addEventListener('click', () => {
+  state.adminPassword = null;
+  navigateTo('/');
+});
 
 // Toggle custom splits
 customSplitsToggle.addEventListener('change', () => {

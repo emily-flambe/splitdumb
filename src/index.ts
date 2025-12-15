@@ -7,6 +7,7 @@ import trips from './api/trips';
 import participants from './api/participants';
 import expenses from './api/expenses';
 import balances from './api/balances';
+import admin from './api/admin';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -30,6 +31,7 @@ app.route('/api/trips', trips);
 app.route('/api/trips/:slug/participants', participants);
 app.route('/api/trips/:slug/expenses', expenses);
 app.route('/api/trips/:slug/balances', balances);
+app.route('/api/admin', admin);
 
 // 404 handler
 app.notFound((c) => {
