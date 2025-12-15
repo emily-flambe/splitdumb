@@ -5,6 +5,7 @@ import type { Env } from './types';
 
 import trips from './api/trips';
 import participants from './api/participants';
+import expenses from './api/expenses';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -26,6 +27,7 @@ app.get('/api/health', (c) => {
 // Mount API routes
 app.route('/api/trips', trips);
 app.route('/api/trips/:slug/participants', participants);
+app.route('/api/trips/:slug/expenses', expenses);
 
 // 404 handler
 app.notFound((c) => {
