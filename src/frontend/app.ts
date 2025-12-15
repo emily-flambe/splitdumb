@@ -23,6 +23,7 @@ interface AdminTrip {
   id: number;
   slug: string;
   name: string;
+  is_test: number;
   created_at: number;
   updated_at: number;
 }
@@ -37,6 +38,7 @@ interface AppState {
   loading: boolean;
   adminPassword: string | null;
   adminTrips: AdminTrip[];
+  includeTestTrips: boolean;
 }
 
 const state: AppState = {
@@ -48,6 +50,7 @@ const state: AppState = {
   loading: false,
   adminPassword: null,
   adminTrips: [],
+  includeTestTrips: false,
 };
 
 // DOM Elements
@@ -89,7 +92,7 @@ function navigateTo(path: string) {
   handleRoute();
 }
 
-function handleRoute() {
+async function handleRoute() {
   const path = window.location.pathname;
 
   if (path === '/') {
@@ -110,7 +113,7 @@ function handleRoute() {
   } else {
     const slug = path.slice(1); // Remove leading slash
     if (slug) {
-      showTripView(slug);
+      await showTripView(slug);
     } else {
       showLandingView();
     }
@@ -146,7 +149,33 @@ function showLandingView() {
   adminView.classList.remove('active');
 }
 
-function showTripView(slug: string) {
+async function showTripView(slug: string) {
+  // Check if we have credentials for this trip
+  const credentials = getCredentials();
+
+  if (!credentials || credentials.slug !== slug) {
+    // No credentials or wrong trip - prompt for password
+    const password = prompt(`Enter password for trip "${slug}":`);
+    if (!password) {
+      // User cancelled - redirect to landing
+      navigateTo('/');
+      return;
+    }
+
+    // Try to authenticate
+    try {
+      await authTrip(slug, password);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        alert(`Failed to join trip: ${error.message}`);
+      } else {
+        alert('Failed to join trip. Please try again.');
+      }
+      navigateTo('/');
+      return;
+    }
+  }
+
   state.currentView = 'trip';
   state.currentSlug = slug;
   landingView.classList.remove('active');
@@ -169,8 +198,11 @@ async function handleCreateTrip() {
   const tripName = prompt('Enter trip name:');
   if (!tripName?.trim()) return;
 
+  // Check if test mode is enabled via URL parameter (for E2E tests)
+  const isTestTrip = new URLSearchParams(window.location.search).get('test') === 'true';
+
   try {
-    const result = await createTrip(tripName.trim());
+    const result = await createTrip(tripName.trim(), isTestTrip);
     // Navigate to trip and show credentials modal
     navigateTo(`/${result.slug}`);
     // Show credentials after a short delay to let the trip view load
@@ -511,7 +543,7 @@ function handleShareTrip() {
 
   const shareMessage = `Join my trip on SplitDumb!
 
-splitdumb.emilycogsdill.com/${credentials.slug}
+https://splitdumb.emilycogsdill.com/${credentials.slug}
 Password: ${credentials.password}
 
 (it's super secure don't worry)`;
@@ -537,7 +569,8 @@ async function loadAdminData() {
   if (!state.adminPassword) return;
 
   try {
-    const response = await fetch('/api/admin/trips', {
+    const url = `/api/admin/trips?includeTest=${state.includeTestTrips}`;
+    const response = await fetch(url, {
       headers: { 'X-Admin-Password': state.adminPassword },
     });
 
@@ -559,17 +592,30 @@ async function loadAdminData() {
 }
 
 function renderAdminTrips() {
+  // Render controls
+  const controlsHtml = `
+    <div class="admin-controls">
+      <label class="toggle-label">
+        <input type="checkbox" id="include-test-toggle" ${state.includeTestTrips ? 'checked' : ''}>
+        Show test trips
+      </label>
+      <button class="btn btn-secondary btn-small" id="delete-all-test-btn" style="color: #ef4444;">Delete All Test Trips</button>
+    </div>
+  `;
+
   if (state.adminTrips.length === 0) {
-    adminTripsList.innerHTML = '<div class="empty-state">No trips found</div>';
+    adminTripsList.innerHTML = controlsHtml + '<div class="empty-state">No trips found</div>';
+    attachAdminControlListeners();
     return;
   }
 
-  adminTripsList.innerHTML = state.adminTrips
+  const tripsHtml = state.adminTrips
     .map((trip) => {
       const createdDate = new Date(trip.created_at * 1000).toLocaleDateString();
+      const testBadge = trip.is_test ? '<span class="test-badge">TEST</span>' : '';
       return `
         <div class="admin-trip-card" data-slug="${escapeHtml(trip.slug)}">
-          <h3>${escapeHtml(trip.name)}</h3>
+          <h3>${escapeHtml(trip.name)} ${testBadge}</h3>
           <div class="trip-slug">${escapeHtml(trip.slug)}</div>
           <div class="trip-meta">Created: ${createdDate}</div>
           <div class="admin-trip-actions">
@@ -582,6 +628,21 @@ function renderAdminTrips() {
     })
     .join('');
 
+  adminTripsList.innerHTML = controlsHtml + tripsHtml;
+  attachAdminControlListeners();
+  attachAdminTripListeners();
+}
+
+function attachAdminControlListeners() {
+  document.getElementById('include-test-toggle')?.addEventListener('change', async (e) => {
+    state.includeTestTrips = (e.target as HTMLInputElement).checked;
+    await loadAdminData();
+  });
+
+  document.getElementById('delete-all-test-btn')?.addEventListener('click', handleDeleteAllTestTrips);
+}
+
+function attachAdminTripListeners() {
   // Add event listeners
   adminTripsList.querySelectorAll('.admin-rename').forEach((btn) => {
     btn.addEventListener('click', (e) => {
@@ -677,6 +738,29 @@ async function handleAdminDelete(slug: string) {
   }
 }
 
+async function handleDeleteAllTestTrips() {
+  if (!state.adminPassword) return;
+
+  const confirmed = confirm('Delete ALL test trips? This cannot be undone.');
+  if (!confirmed) return;
+
+  try {
+    const response = await fetch('/api/admin/trips/test', {
+      method: 'DELETE',
+      headers: { 'X-Admin-Password': state.adminPassword },
+    });
+
+    if (!response.ok) throw new Error('Failed to delete test trips');
+
+    const result = await response.json();
+    alert(result.message);
+    await loadAdminData();
+  } catch (error) {
+    alert('Failed to delete test trips');
+    console.error(error);
+  }
+}
+
 // Modal functions
 function showModal(title: string, content: string) {
   modalTitle.textContent = title;
@@ -716,7 +800,7 @@ function showCredentialsModal(slug: string, password: string, isNewTrip = false)
   document.getElementById('copy-credentials-btn')?.addEventListener('click', () => {
     const shareMessage = `Join my trip on SplitDumb!
 
-splitdumb.emilycogsdill.com/${slug}
+https://splitdumb.emilycogsdill.com/${slug}
 Password: ${password}
 
 (it's super secure don't worry)`;
@@ -915,7 +999,7 @@ function renderExpenses() {
 
   expensesList.innerHTML = state.expenses
     .map((expense) => {
-      const date = new Date(expense.created_at);
+      const date = new Date(expense.created_at * 1000);
       const dateStr = date.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',

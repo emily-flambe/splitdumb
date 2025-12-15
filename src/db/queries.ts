@@ -24,10 +24,11 @@ export async function createTrip(
   const password = data.password || generatePassword();
   const passwordHash = await hashPassword(password);
   const now = Math.floor(Date.now() / 1000);
+  const isTest = data.is_test ? 1 : 0;
 
   const result = await db.prepare(
-    'INSERT INTO trips (slug, name, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
-  ).bind(slug, data.name, passwordHash, now, now).run();
+    'INSERT INTO trips (slug, name, password_hash, is_test, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+  ).bind(slug, data.name, passwordHash, isTest, now, now).run();
 
   if (!result.success) {
     throw new Error('Failed to create trip');
@@ -38,6 +39,7 @@ export async function createTrip(
     slug,
     name: data.name,
     password_hash: passwordHash,
+    is_test: isTest,
     created_at: now,
     updated_at: now
   };
@@ -45,10 +47,11 @@ export async function createTrip(
   return { trip, password };
 }
 
-export async function getAllTrips(db: D1Database): Promise<Trip[]> {
-  const result = await db.prepare(
-    'SELECT * FROM trips ORDER BY created_at DESC'
-  ).all<Trip>();
+export async function getAllTrips(db: D1Database, includeTest = false): Promise<Trip[]> {
+  const query = includeTest
+    ? 'SELECT * FROM trips ORDER BY created_at DESC'
+    : 'SELECT * FROM trips WHERE is_test = 0 OR is_test IS NULL ORDER BY created_at DESC';
+  const result = await db.prepare(query).all<Trip>();
   return result.results || [];
 }
 

@@ -10,12 +10,15 @@
     "db:init": "wrangler d1 execute splitdumb-db --local --file=./src/db/schema.sql",
     "db:init:remote": "wrangler d1 execute splitdumb-db --remote --file=./src/db/schema.sql",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "hono": "^4.6.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.0",
     "@cloudflare/vitest-pool-workers": "^0.10.15",
     "@cloudflare/workers-types": "^4.20251213.0",
     "typescript": "^5.6.0",

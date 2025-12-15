@@ -5,6 +5,7 @@ export interface Trip {
   slug: string;
   name: string;
   password_hash: string;
+  is_test: number;
   created_at: number;
   updated_at: number;
 }
@@ -38,6 +39,7 @@ export interface ExpenseSplit {
 export interface CreateTripRequest {
   name: string;
   password?: string;
+  is_test?: boolean;
 }
 
 export interface UpdateTripRequest {

@@ -109,13 +109,14 @@ async function apiFetch<T>(
 // Trip Operations
 
 export async function createTrip(
-  name: string
+  name: string,
+  isTest = false
 ): Promise<{ slug: string; password: string; name: string }> {
   const result = await apiFetch<{ slug: string; password: string; name: string }>(
     '/api/trips',
     {
       method: 'POST',
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, is_test: isTest }),
     }
   );
   // Automatically save credentials after creating a trip

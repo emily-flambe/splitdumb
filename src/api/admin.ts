@@ -32,13 +32,26 @@ app.post('/auth', async (c) => {
 // GET /api/admin/trips - List all trips
 app.get('/trips', verifyAdmin, async (c) => {
   try {
-    const trips = await db.getAllTrips(c.env.DB);
+    const includeTest = c.req.query('includeTest') === 'true';
+    const trips = await db.getAllTrips(c.env.DB, includeTest);
     // Don't expose password hashes
     const sanitized = trips.map(({ password_hash, ...trip }) => trip);
     return c.json(sanitized);
   } catch (error) {
     console.error('Error listing trips:', error);
     return c.json({ error: 'Failed to list trips' }, 500);
+  }
+});
+
+// DELETE /api/admin/trips/test - Delete all test trips
+app.delete('/trips/test', verifyAdmin, async (c) => {
+  try {
+    const result = await c.env.DB.prepare('DELETE FROM trips WHERE is_test = 1').run();
+    const deleted = result.meta.changes || 0;
+    return c.json({ success: true, message: `Deleted ${deleted} test trip(s)` });
+  } catch (error) {
+    console.error('Error deleting test trips:', error);
+    return c.json({ error: 'Failed to delete test trips' }, 500);
   }
 });
 
