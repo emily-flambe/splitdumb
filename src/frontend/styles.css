@@ -563,22 +563,39 @@ select:focus {
   border-radius: var(--radius-md);
   padding: var(--space-lg);
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
 }
 
-.balance-text {
-  font-size: 1.125rem;
-  color: var(--text-primary);
-}
-
-.balance-text .name {
+.balance-name {
   font-weight: 600;
+  font-size: 1.125rem;
   color: var(--accent-teal);
 }
 
-.balance-text .amount {
+.balance-status {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  text-transform: lowercase;
+}
+
+.balance-amount {
   font-weight: 700;
-  color: var(--accent-purple);
+  font-size: 1.5rem;
   font-family: var(--font-sans);
+}
+
+.balance-item.positive .balance-amount {
+  color: var(--success);
+}
+
+.balance-item.negative .balance-amount {
+  color: var(--danger);
+}
+
+.balance-item.neutral .balance-amount {
+  color: var(--text-muted);
 }
 
 /* States */

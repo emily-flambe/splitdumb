@@ -380,13 +380,25 @@ function renderBalances() {
   balancesList.innerHTML = state.balances
     .map((balance) => {
       const netAmount = Math.abs(balance.net);
-      const sign = balance.net > 0 ? '+' : balance.net < 0 ? '-' : '';
-      const colorClass = balance.net > 0 ? 'positive' : balance.net < 0 ? 'negative' : 'neutral';
+      let statusText = '';
+      let colorClass = '';
+
+      if (balance.net > 0) {
+        statusText = 'gets back';
+        colorClass = 'positive';
+      } else if (balance.net < 0) {
+        statusText = 'owes';
+        colorClass = 'negative';
+      } else {
+        statusText = 'is settled up';
+        colorClass = 'neutral';
+      }
 
       return `
         <div class="balance-item ${colorClass}">
           <span class="balance-name">${escapeHtml(balance.participant_name)}</span>
-          <span class="balance-amount">${sign}$${netAmount.toFixed(2)}</span>
+          <span class="balance-status">${statusText}</span>
+          <span class="balance-amount">$${netAmount.toFixed(2)}</span>
         </div>
       `;
     })
