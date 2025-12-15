@@ -1,0 +1,26 @@
+{
+  "name": "splitdumb",
+  "version": "1.0.0",
+  "description": "Simple expense splitter for friend trips",
+  "type": "module",
+  "scripts": {
+    "dev": "npm run build:frontend && wrangler dev",
+    "deploy": "npm run build:frontend && wrangler deploy",
+    "build:frontend": "vite build",
+    "db:init": "wrangler d1 execute splitdumb-db --local --file=./src/db/schema.sql",
+    "db:init:remote": "wrangler d1 execute splitdumb-db --remote --file=./src/db/schema.sql",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.10.15",
+    "@cloudflare/workers-types": "^4.20251213.0",
+    "typescript": "^5.6.0",
+    "vite": "^5.4.0",
+    "vitest": "~3.2.0",
+    "wrangler": "^4.54.0"
+  }
+}

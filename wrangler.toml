@@ -1,0 +1,19 @@
+name = "splitdumb"
+main = "src/index.ts"
+compatibility_date = "2025-12-15"
+
+[[routes]]
+pattern = "splitdumb.emilycogsdill.com/*"
+zone_name = "emilycogsdill.com"
+
+[assets]
+directory = "./dist"
+not_found_handling = "single-page-application"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "splitdumb-db"
+database_id = "placeholder-will-be-replaced"
+
+[dev]
+port = 8787
