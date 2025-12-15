@@ -4,6 +4,7 @@ import { cors } from 'hono/cors';
 import type { Env } from './types';
 
 import trips from './api/trips';
+import participants from './api/participants';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -24,6 +25,7 @@ app.get('/api/health', (c) => {
 
 // Mount API routes
 app.route('/api/trips', trips);
+app.route('/api/trips/:slug/participants', participants);
 
 // 404 handler
 app.notFound((c) => {
