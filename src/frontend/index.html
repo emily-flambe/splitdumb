@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SplitDumb - Split Expenses Simply</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Crimson+Pro:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Landing Page -->
+    <section id="landing" class="view active">
+      <div class="landing-content">
+        <h1 class="logo">Split<span>Dumb</span></h1>
+        <p class="tagline">Split expenses without the spreadsheet drama</p>
+
+        <div class="action-cards">
+          <div class="card">
+            <h2>Start a New Trip</h2>
+            <p>Create a trip and invite your friends</p>
+            <button id="create-trip-btn" class="btn btn-primary">
+              Create Trip
+              <span class="arrow">→</span>
+            </button>
+          </div>
+
+          <div class="divider">
+            <span>or</span>
+          </div>
+
+          <div class="card">
+            <h2>Join Existing Trip</h2>
+            <form id="join-form" class="join-form">
+              <input
+                type="text"
+                id="trip-slug"
+                placeholder="Trip code (e.g., quick-fox-river)"
+                required
+              >
+              <input
+                type="password"
+                id="trip-password"
+                placeholder="Password"
+                required
+              >
+              <button type="submit" class="btn btn-secondary">Join Trip</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Trip View -->
+    <section id="trip-view" class="view">
+      <header class="trip-header">
+        <div class="header-top">
+          <button id="back-btn" class="icon-btn" aria-label="Back to home">←</button>
+          <h1 id="trip-name" class="trip-title">Loading...</h1>
+          <button id="settings-btn" class="icon-btn" aria-label="Settings">⚙</button>
+        </div>
+        <button id="share-btn" class="btn btn-share">
+          <span class="share-icon">🔗</span>
+          Share Trip
+        </button>
+      </header>
+
+      <div class="trip-content">
+        <!-- Participants Section -->
+        <section class="section participants-section">
+          <div class="section-header">
+            <h2>Participants</h2>
+            <button id="add-participant-btn" class="btn btn-small">+ Add</button>
+          </div>
+          <ul id="participants-list" class="participants-list">
+            <li class="loading-state">Loading participants...</li>
+          </ul>
+        </section>
+
+        <!-- Add Expense Form -->
+        <section class="section expense-form-section">
+          <h2>Add Expense</h2>
+          <form id="expense-form" class="expense-form">
+            <div class="form-row">
+              <input
+                type="text"
+                id="expense-description"
+                placeholder="What was it for?"
+                required
+              >
+              <input
+                type="number"
+                id="expense-amount"
+                placeholder="Amount"
+                step="0.01"
+                min="0"
+                required
+              >
+            </div>
+
+            <div class="form-row">
+              <select id="expense-payer" required>
+                <option value="">Who paid?</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="custom-splits-toggle">
+                <span>Custom split amounts</span>
+              </label>
+            </div>
+
+            <div id="participants-selection" class="participants-selection">
+              <p class="helper-text">Select who this expense is for:</p>
+              <div id="participant-checkboxes" class="checkbox-grid">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+
+            <div id="custom-splits" class="custom-splits" style="display: none;">
+              <p class="helper-text">Enter custom amounts for each person:</p>
+              <div id="custom-split-inputs" class="custom-split-inputs">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Add Expense</button>
+          </form>
+        </section>
+
+        <!-- Expenses List -->
+        <section class="section expenses-section">
+          <h2>Expenses</h2>
+          <ul id="expenses-list" class="expenses-list">
+            <li class="empty-state">No expenses yet. Add one above!</li>
+          </ul>
+        </section>
+
+        <!-- Balances Section -->
+        <section class="section balances-section">
+          <h2>Who Owes What</h2>
+          <div id="balances-list" class="balances-list">
+            <div class="empty-state">Add expenses to see balances</div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="./app.ts"></script>
+</body>
+</html>
