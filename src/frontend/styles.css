@@ -102,7 +102,7 @@ body {
 }
 
 /* Landing Page */
-#landing {
+#landing.active {
   display: flex;
   align-items: center;
   justify-content: center;
