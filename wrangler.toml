@@ -13,7 +13,7 @@ not_found_handling = "single-page-application"
 [[d1_databases]]
 binding = "DB"
 database_name = "splitdumb-db"
-database_id = "placeholder-will-be-replaced"
+database_id = "db8b2e02-214a-41d0-9a09-a208ccefaef0"
 
 [dev]
 port = 8787
