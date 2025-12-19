@@ -84,6 +84,14 @@ export interface Balance {
   net: number;
 }
 
+export interface SimplifiedDebt {
+  from_participant_id: number;
+  from_participant_name: string;
+  to_participant_id: number;
+  to_participant_name: string;
+  amount: number;
+}
+
 // Cloudflare bindings
 
 export interface Env {

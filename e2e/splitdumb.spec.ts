@@ -283,4 +283,170 @@ test.describe('SplitDumb E2E Tests', () => {
       await expect(page).toHaveURL('/');
     });
   });
+
+  test.describe('Debt Simplification', () => {
+    test('displays simplified payment instructions by default', async ({ page }) => {
+      await page.goto('/?test=true');
+
+      const dialogResponses = ['Simplification Test', 'Alice', 'Bob', 'Charlie'];
+      let dialogIndex = 0;
+      page.on('dialog', async (dialog) => {
+        if (dialogIndex < dialogResponses.length) {
+          await dialog.accept(dialogResponses[dialogIndex++]);
+        } else {
+          await dialog.accept();
+        }
+      });
+
+      // Create trip
+      await page.getByRole('button', { name: /Create Trip/i }).click();
+      await page.getByRole('button', { name: 'Continue to Trip' }).click();
+
+      // Add three participants
+      await page.getByRole('button', { name: '+ Add' }).click();
+      await page.getByRole('button', { name: '+ Add' }).click();
+      await page.getByRole('button', { name: '+ Add' }).click();
+
+      // Add expense: Alice pays $75 for dinner, split equally among all three
+      await page.getByRole('textbox', { name: /what was it for/i }).fill('Dinner');
+      await page.getByPlaceholder('Amount').fill('75');
+      await page.locator('#expense-payer').selectOption('Alice');
+      await page.getByRole('button', { name: 'Add Expense' }).click();
+
+      // By default, should show simplified view
+      await expect(page.getByText('Who should pay whom:')).toBeVisible();
+
+      // Should show payment instructions: Bob pays Alice $25, Charlie pays Alice $25
+      const balanceItems = page.locator('.balance-item.simplified');
+      await expect(balanceItems).toHaveCount(2);
+
+      // Verify payment instructions
+      await expect(page.locator('.balance-item.simplified').first()).toContainText('pays');
+      await expect(page.locator('.balance-item.simplified').first()).toContainText('$25.00');
+      await expect(page.locator('.balance-item.simplified').first()).toContainText('Alice');
+    });
+
+    test('can toggle between simplified and detailed balance views', async ({ page }) => {
+      await page.goto('/?test=true');
+
+      const dialogResponses = ['Toggle Test', 'User1', 'User2'];
+      let dialogIndex = 0;
+      page.on('dialog', async (dialog) => {
+        if (dialogIndex < dialogResponses.length) {
+          await dialog.accept(dialogResponses[dialogIndex++]);
+        } else {
+          await dialog.accept();
+        }
+      });
+
+      // Create trip and add participants
+      await page.getByRole('button', { name: /Create Trip/i }).click();
+      await page.getByRole('button', { name: 'Continue to Trip' }).click();
+      await page.getByRole('button', { name: '+ Add' }).click();
+      await page.getByRole('button', { name: '+ Add' }).click();
+
+      // Add expense
+      await page.getByRole('textbox', { name: /what was it for/i }).fill('Test');
+      await page.getByPlaceholder('Amount').fill('100');
+      await page.locator('#expense-payer').selectOption('User1');
+      await page.getByRole('button', { name: 'Add Expense' }).click();
+
+      // Should start with simplified view
+      await expect(page.getByText('Who should pay whom:')).toBeVisible();
+
+      // Toggle to detailed view
+      await page.getByRole('button', { name: 'Show Detailed Balances' }).click();
+
+      // Should now show detailed balances
+      await expect(page.getByText('gets back')).toBeVisible();
+      await expect(page.getByText('owes')).toBeVisible();
+
+      // Toggle back to simplified
+      await page.getByRole('button', { name: 'Show Simplified Payments' }).click();
+
+      // Should show simplified view again
+      await expect(page.getByText('Who should pay whom:')).toBeVisible();
+    });
+
+    test('shows correct simplified debts for complex scenario', async ({ page }) => {
+      await page.goto('/?test=true');
+
+      const dialogResponses = ['Complex Test', 'Alice', 'Bob', 'Charlie'];
+      let dialogIndex = 0;
+      page.on('dialog', async (dialog) => {
+        if (dialogIndex < dialogResponses.length) {
+          await dialog.accept(dialogResponses[dialogIndex++]);
+        } else {
+          await dialog.accept();
+        }
+      });
+
+      // Create trip and add participants
+      await page.getByRole('button', { name: /Create Trip/i }).click();
+      await page.getByRole('button', { name: 'Continue to Trip' }).click();
+      await page.getByRole('button', { name: '+ Add' }).click();
+      await page.getByRole('button', { name: '+ Add' }).click();
+      await page.getByRole('button', { name: '+ Add' }).click();
+
+      // Add multiple expenses
+      // Alice pays $60 for all three
+      await page.getByRole('textbox', { name: /what was it for/i }).fill('Lunch');
+      await page.getByPlaceholder('Amount').fill('60');
+      await page.locator('#expense-payer').selectOption('Alice');
+      await page.getByRole('button', { name: 'Add Expense' }).click();
+
+      // Bob pays $30 for all three
+      await page.getByRole('textbox', { name: /what was it for/i }).fill('Coffee');
+      await page.getByPlaceholder('Amount').fill('30');
+      await page.locator('#expense-payer').selectOption('Bob');
+      await page.getByRole('button', { name: 'Add Expense' }).click();
+
+      // The simplified debts should consolidate these:
+      // Total: $90, each person should pay $30
+      // Alice paid $60, owes $30, net: +$30 (gets back)
+      // Bob paid $30, owes $30, net: $0 (settled)
+      // Charlie paid $0, owes $30, net: -$30 (owes)
+      // Simplified: Charlie pays Alice $30
+
+      await expect(page.getByText('Who should pay whom:')).toBeVisible();
+
+      // Should only have one payment instruction (Charlie → Alice)
+      const balanceItems = page.locator('.balance-item.simplified');
+      await expect(balanceItems).toHaveCount(1);
+
+      // Verify it's the correct payment
+      await expect(balanceItems.first()).toContainText('Charlie');
+      await expect(balanceItems.first()).toContainText('pays');
+      await expect(balanceItems.first()).toContainText('$30.00');
+      await expect(balanceItems.first()).toContainText('Alice');
+    });
+
+    test('shows settled message when all debts are paid', async ({ page }) => {
+      await page.goto('/?test=true');
+
+      const dialogResponses = ['Settled Test', 'User1'];
+      let dialogIndex = 0;
+      page.on('dialog', async (dialog) => {
+        if (dialogIndex < dialogResponses.length) {
+          await dialog.accept(dialogResponses[dialogIndex++]);
+        } else {
+          await dialog.accept();
+        }
+      });
+
+      // Create trip and add one participant
+      await page.getByRole('button', { name: /Create Trip/i }).click();
+      await page.getByRole('button', { name: 'Continue to Trip' }).click();
+      await page.getByRole('button', { name: '+ Add' }).click();
+
+      // Add expense where user pays for themselves
+      await page.getByRole('textbox', { name: /what was it for/i }).fill('Solo');
+      await page.getByPlaceholder('Amount').fill('10');
+      await page.locator('#expense-payer').selectOption('User1');
+      await page.getByRole('button', { name: 'Add Expense' }).click();
+
+      // Should show settled message
+      await expect(page.getByText('All debts are settled!')).toBeVisible();
+    });
+  });
 });

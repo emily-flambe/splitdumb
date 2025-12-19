@@ -20,4 +20,16 @@ app.get('/', async (c) => {
   }
 });
 
+// GET /api/trips/:slug/balances/simplified - Get simplified debts
+app.get('/simplified', async (c) => {
+  try {
+    const trip = c.get('trip');
+    const simplifiedDebts = await db.getSimplifiedDebts(c.env.DB, trip.id);
+    return c.json(simplifiedDebts);
+  } catch (error) {
+    console.error('Error fetching simplified debts:', error);
+    return c.json({ error: 'Failed to fetch simplified debts' }, 500);
+  }
+});
+
 export default app;

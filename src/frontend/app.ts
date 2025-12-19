@@ -1,5 +1,5 @@
 // src/frontend/app.ts
-import type { TripWithParticipants, Participant, ExpenseWithSplits, Balance } from '../types';
+import type { TripWithParticipants, Participant, ExpenseWithSplits, Balance, SimplifiedDebt } from '../types';
 import {
   createTrip,
   authTrip,
@@ -12,6 +12,7 @@ import {
   deleteExpense,
   getExpenses,
   getBalances,
+  getSimplifiedDebts,
   getCredentials,
   saveCredentials,
   clearCredentials,
@@ -35,6 +36,8 @@ interface AppState {
   trip: TripWithParticipants | null;
   expenses: ExpenseWithSplits[];
   balances: Balance[];
+  simplifiedDebts: SimplifiedDebt[];
+  showSimplified: boolean;
   loading: boolean;
   adminPassword: string | null;
   adminTrips: AdminTrip[];
@@ -47,6 +50,8 @@ const state: AppState = {
   trip: null,
   expenses: [],
   balances: [],
+  simplifiedDebts: [],
+  showSimplified: true,
   loading: false,
   adminPassword: null,
   adminTrips: [],
@@ -243,14 +248,16 @@ async function loadTripData(slug: string) {
   state.loading = true;
 
   try {
-    const [trip, balances, expenses] = await Promise.all([
+    const [trip, balances, simplifiedDebts, expenses] = await Promise.all([
       getTrip(slug),
       getBalances(slug),
+      getSimplifiedDebts(slug),
       getExpenses(slug),
     ]);
 
     state.trip = trip;
     state.balances = balances;
+    state.simplifiedDebts = simplifiedDebts;
     state.expenses = expenses;
 
     renderTripView();
@@ -377,32 +384,81 @@ function renderBalances() {
     return;
   }
 
-  balancesList.innerHTML = state.balances
-    .map((balance) => {
-      const netAmount = Math.abs(balance.net);
-      let statusText = '';
-      let colorClass = '';
+  // Toggle button
+  const toggleButton = `
+    <div class="balance-toggle">
+      <button id="toggle-balance-view" class="toggle-btn">
+        ${state.showSimplified ? 'Show Detailed Balances' : 'Show Simplified Payments'}
+      </button>
+    </div>
+  `;
 
-      if (balance.net > 0) {
-        statusText = 'gets back';
-        colorClass = 'positive';
-      } else if (balance.net < 0) {
-        statusText = 'owes';
-        colorClass = 'negative';
-      } else {
-        statusText = 'is settled up';
-        colorClass = 'neutral';
-      }
+  let content = '';
 
-      return `
-        <div class="balance-item ${colorClass}">
-          <span class="balance-name">${escapeHtml(balance.participant_name)}</span>
-          <span class="balance-status">${statusText}</span>
-          <span class="balance-amount">$${netAmount.toFixed(2)}</span>
+  if (state.showSimplified) {
+    // Show simplified debts (payment instructions)
+    if (state.simplifiedDebts.length === 0) {
+      content = '<div class="empty-state">All debts are settled!</div>';
+    } else {
+      content = `
+        <div class="simplified-debts-header">
+          <strong>Who should pay whom:</strong>
         </div>
+        ${state.simplifiedDebts
+          .map((debt) => {
+            return `
+              <div class="balance-item simplified">
+                <span class="balance-name">${escapeHtml(debt.from_participant_name)}</span>
+                <span class="balance-status">pays</span>
+                <span class="balance-amount">$${debt.amount.toFixed(2)}</span>
+                <span class="balance-status">to</span>
+                <span class="balance-name">${escapeHtml(debt.to_participant_name)}</span>
+              </div>
+            `;
+          })
+          .join('')}
       `;
-    })
-    .join('');
+    }
+  } else {
+    // Show detailed balances
+    content = state.balances
+      .map((balance) => {
+        const netAmount = Math.abs(balance.net);
+        let statusText = '';
+        let colorClass = '';
+
+        if (balance.net > 0) {
+          statusText = 'gets back';
+          colorClass = 'positive';
+        } else if (balance.net < 0) {
+          statusText = 'owes';
+          colorClass = 'negative';
+        } else {
+          statusText = 'is settled up';
+          colorClass = 'neutral';
+        }
+
+        return `
+          <div class="balance-item ${colorClass}">
+            <span class="balance-name">${escapeHtml(balance.participant_name)}</span>
+            <span class="balance-status">${statusText}</span>
+            <span class="balance-amount">$${netAmount.toFixed(2)}</span>
+          </div>
+        `;
+      })
+      .join('');
+  }
+
+  balancesList.innerHTML = toggleButton + content;
+
+  // Add event listener for toggle button
+  const toggleBtn = document.getElementById('toggle-balance-view');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      state.showSimplified = !state.showSimplified;
+      renderBalances();
+    });
+  }
 }
 
 async function handleAddParticipant() {
