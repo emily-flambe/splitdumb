@@ -465,6 +465,39 @@ select:focus {
   accent-color: var(--accent-teal);
 }
 
+.split-mode-toggle {
+  display: flex;
+  gap: var(--space-md);
+  margin-bottom: var(--space-sm);
+  padding: var(--space-sm);
+  background-color: var(--surface-dark);
+  border-radius: var(--radius-md);
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  transition: color 0.2s ease;
+}
+
+.radio-label:hover {
+  color: var(--text-primary);
+}
+
+.radio-label input[type="radio"] {
+  accent-color: var(--accent-teal);
+  cursor: pointer;
+}
+
+.radio-label input[type="radio"]:checked + span {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
 .custom-split-inputs {
   display: flex;
   flex-direction: column;
@@ -473,7 +506,7 @@ select:focus {
 
 .split-input-row {
   display: grid;
-  grid-template-columns: 1fr 120px;
+  grid-template-columns: 1fr 120px auto;
   gap: var(--space-sm);
   align-items: center;
 }
@@ -481,6 +514,13 @@ select:focus {
 .split-input-row label {
   color: var(--text-secondary);
   font-size: 0.875rem;
+}
+
+.percentage-symbol {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  min-width: 20px;
 }
 
 /* Expenses List */

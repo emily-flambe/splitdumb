@@ -77,6 +77,9 @@ const participantCheckboxes = document.getElementById('participant-checkboxes') 
 const customSplitsToggle = document.getElementById('custom-splits-toggle') as HTMLInputElement;
 const customSplitsSection = document.getElementById('custom-splits') as HTMLDivElement;
 const customSplitInputs = document.getElementById('custom-split-inputs') as HTMLDivElement;
+const splitModeAmount = document.getElementById('split-mode-amount') as HTMLInputElement;
+const splitModePercentage = document.getElementById('split-mode-percentage') as HTMLInputElement;
+const customSplitsHelper = document.getElementById('custom-splits-helper') as HTMLParagraphElement;
 const expensesList = document.getElementById('expenses-list') as HTMLUListElement;
 const balancesList = document.getElementById('balances-list') as HTMLDivElement;
 
@@ -350,6 +353,14 @@ function renderCustomSplitInputs() {
   if (!state.trip) return;
 
   const participants = state.trip.participants;
+  const isPercentageMode = splitModePercentage.checked;
+
+  // Update helper text
+  if (isPercentageMode) {
+    customSplitsHelper.textContent = 'Enter percentage for each person (must total 100%):';
+  } else {
+    customSplitsHelper.textContent = 'Enter custom amounts for each person:';
+  }
 
   customSplitInputs.innerHTML = participants
     .map(
@@ -361,10 +372,12 @@ function renderCustomSplitInputs() {
           id="split-${p.id}"
           class="split-amount-input"
           data-participant-id="${p.id}"
-          placeholder="0.00"
-          step="0.01"
+          placeholder="${isPercentageMode ? '0' : '0.00'}"
+          step="${isPercentageMode ? '0.01' : '0.01'}"
           min="0"
+          ${isPercentageMode ? 'max="100"' : ''}
         >
+        ${isPercentageMode ? '<span class="percentage-symbol">%</span>' : ''}
       </div>
     `
     )
@@ -456,29 +469,64 @@ async function handleAddExpense(event: Event) {
 
   if (customSplitsToggle.checked) {
     // Custom splits mode
+    const isPercentageMode = splitModePercentage.checked;
     splits = [];
     const splitInputs = customSplitInputs.querySelectorAll('.split-amount-input') as NodeListOf<HTMLInputElement>;
 
-    for (const input of splitInputs) {
-      const splitAmount = parseFloat(input.value);
-      if (splitAmount > 0) {
-        splits.push({
-          participant_id: parseInt(input.dataset.participantId || '0'),
-          amount: splitAmount,
-        });
+    if (isPercentageMode) {
+      // Percentage mode - collect percentages and validate they sum to 100%
+      const percentages: { participant_id: number; percentage: number }[] = [];
+
+      for (const input of splitInputs) {
+        const percentage = parseFloat(input.value);
+        if (percentage > 0) {
+          percentages.push({
+            participant_id: parseInt(input.dataset.participantId || '0'),
+            percentage: percentage,
+          });
+        }
       }
-    }
 
-    if (splits.length === 0) {
-      alert('Please enter at least one split amount');
-      return;
-    }
+      if (percentages.length === 0) {
+        alert('Please enter at least one percentage');
+        return;
+      }
 
-    // Validate that splits sum to expense amount
-    const totalSplits = splits.reduce((sum, split) => sum + split.amount, 0);
-    if (Math.abs(totalSplits - amount) > 0.01) {
-      alert(`Split amounts ($${totalSplits.toFixed(2)}) must equal expense amount ($${amount.toFixed(2)})`);
-      return;
+      // Validate that percentages sum to 100%
+      const totalPercentage = percentages.reduce((sum, p) => sum + p.percentage, 0);
+      if (Math.abs(totalPercentage - 100) > 0.01) {
+        alert(`Percentages must total 100%. Current total: ${totalPercentage.toFixed(2)}%`);
+        return;
+      }
+
+      // Convert percentages to dollar amounts
+      splits = percentages.map((p) => ({
+        participant_id: p.participant_id,
+        amount: (amount * p.percentage) / 100,
+      }));
+    } else {
+      // Dollar amount mode
+      for (const input of splitInputs) {
+        const splitAmount = parseFloat(input.value);
+        if (splitAmount > 0) {
+          splits.push({
+            participant_id: parseInt(input.dataset.participantId || '0'),
+            amount: splitAmount,
+          });
+        }
+      }
+
+      if (splits.length === 0) {
+        alert('Please enter at least one split amount');
+        return;
+      }
+
+      // Validate that splits sum to expense amount
+      const totalSplits = splits.reduce((sum, split) => sum + split.amount, 0);
+      if (Math.abs(totalSplits - amount) > 0.01) {
+        alert(`Split amounts ($${totalSplits.toFixed(2)}) must equal expense amount ($${amount.toFixed(2)})`);
+        return;
+      }
     }
   } else {
     // Equal split mode
@@ -981,6 +1029,10 @@ customSplitsToggle.addEventListener('change', () => {
     document.getElementById('participants-selection')!.style.display = 'block';
   }
 });
+
+// Toggle between amount and percentage mode
+splitModeAmount.addEventListener('change', renderCustomSplitInputs);
+splitModePercentage.addEventListener('change', renderCustomSplitInputs);
 
 // Handle browser back/forward
 window.addEventListener('popstate', handleRoute);

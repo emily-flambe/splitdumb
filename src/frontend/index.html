@@ -141,7 +141,17 @@
             </div>
 
             <div id="custom-splits" class="custom-splits" style="display: none;">
-              <p class="helper-text">Enter custom amounts for each person:</p>
+              <div class="split-mode-toggle">
+                <label class="radio-label">
+                  <input type="radio" name="split-mode" value="amount" id="split-mode-amount" checked>
+                  <span>Dollar Amounts</span>
+                </label>
+                <label class="radio-label">
+                  <input type="radio" name="split-mode" value="percentage" id="split-mode-percentage">
+                  <span>Percentages</span>
+                </label>
+              </div>
+              <p class="helper-text" id="custom-splits-helper">Enter custom amounts for each person:</p>
               <div id="custom-split-inputs" class="custom-split-inputs">
                 <!-- Dynamically populated -->
               </div>
