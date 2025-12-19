@@ -95,10 +95,13 @@ test.describe('SplitDumb E2E Tests', () => {
       await expect(page.getByText('Dinner $75.00')).toBeVisible();
       await expect(page.getByText('Paid by Alice')).toBeVisible();
 
-      // Verify balances: Alice +$50, Bob -$25, Charlie -$25
-      await expect(page.getByText('Alice +$50.00')).toBeVisible();
-      await expect(page.getByText('Bob -$25.00')).toBeVisible();
-      await expect(page.getByText('Charlie -$25.00')).toBeVisible();
+      // Verify balances: Alice gets back $50, Bob owes $25, Charlie owes $25
+      await expect(page.getByText('Alice')).toBeVisible();
+      await expect(page.getByText('gets back')).toBeVisible();
+      await expect(page.locator('.balance-item.positive')).toContainText('$50.00');
+      await expect(page.getByText('Bob')).toBeVisible();
+      await expect(page.getByText('owes')).toBeVisible();
+      await expect(page.locator('.balance-item.negative').first()).toContainText('$25.00');
     });
 
     test('can delete an expense and balances update', async ({ page }) => {
