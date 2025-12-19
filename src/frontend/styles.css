@@ -638,6 +638,66 @@ select:focus {
   color: var(--text-muted);
 }
 
+/* Balance toggle */
+.balance-toggle {
+  margin-bottom: var(--space-lg);
+  text-align: center;
+}
+
+.toggle-btn {
+  padding: 0.625rem 1.25rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.toggle-btn:hover {
+  border-color: var(--accent-teal);
+  color: var(--accent-teal);
+  background: var(--accent-teal-glow);
+}
+
+/* Simplified debts */
+.simplified-debts-header {
+  margin-bottom: var(--space-md);
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.balance-item.simplified {
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  text-align: left;
+  padding: var(--space-md);
+  gap: var(--space-sm);
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-elevated) 100%);
+  border: 1px solid var(--border);
+}
+
+.balance-item.simplified .balance-name {
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.balance-item.simplified .balance-amount {
+  font-size: 1.25rem;
+  color: var(--accent-teal);
+  font-weight: 700;
+}
+
+.balance-item.simplified .balance-status {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
 /* States */
 .loading-state,
 .empty-state {

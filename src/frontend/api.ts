@@ -4,6 +4,7 @@ import type {
   Participant,
   ExpenseWithSplits,
   Balance,
+  SimplifiedDebt,
   CreateExpenseRequest,
   UpdateExpenseRequest,
 } from '../types';
@@ -259,4 +260,8 @@ export async function deleteExpense(
 
 export async function getBalances(slug: string): Promise<Balance[]> {
   return apiFetch<Balance[]>(`/api/trips/${slug}/balances`, {}, true);
+}
+
+export async function getSimplifiedDebts(slug: string): Promise<SimplifiedDebt[]> {
+  return apiFetch<SimplifiedDebt[]>(`/api/trips/${slug}/balances/simplified`, {}, true);
 }

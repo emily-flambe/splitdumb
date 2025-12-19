@@ -6,7 +6,9 @@ import type {
   ExpenseSplit,
   CreateTripRequest,
   UpdateTripRequest,
-  TripWithParticipants
+  TripWithParticipants,
+  SimplifiedDebt,
+  Balance
 } from '../types';
 import { hashPassword } from '../lib/password';
 import { generateSlug } from '../lib/slug';
@@ -335,4 +337,64 @@ export async function getBalances(db: D1Database, tripId: number) {
     owes: balances[p.id]?.owes || 0,
     net: (balances[p.id]?.paid || 0) - (balances[p.id]?.owes || 0)
   }));
+}
+
+// ============================================================================
+// DEBT SIMPLIFICATION
+// ============================================================================
+
+/**
+ * Simplifies debts using a greedy algorithm to minimize the number of transactions.
+ * Takes balances and returns a list of payments that need to be made.
+ */
+export async function getSimplifiedDebts(db: D1Database, tripId: number): Promise<SimplifiedDebt[]> {
+  const balances = await getBalances(db, tripId);
+
+  // Separate creditors (people who get money back) and debtors (people who owe)
+  const creditors = balances
+    .filter(b => b.net > 0.01) // Use 0.01 threshold to handle rounding
+    .map(b => ({ ...b }))
+    .sort((a, b) => b.net - a.net); // Sort descending by amount owed to them
+
+  const debtors = balances
+    .filter(b => b.net < -0.01) // Use 0.01 threshold to handle rounding
+    .map(b => ({ ...b, net: Math.abs(b.net) })) // Convert to positive for easier math
+    .sort((a, b) => b.net - a.net); // Sort descending by amount they owe
+
+  const simplifiedDebts: SimplifiedDebt[] = [];
+
+  // Greedy algorithm: match largest debtor with largest creditor
+  let i = 0; // creditors index
+  let j = 0; // debtors index
+
+  while (i < creditors.length && j < debtors.length) {
+    const creditor = creditors[i];
+    const debtor = debtors[j];
+
+    // Determine payment amount (minimum of what creditor is owed and what debtor owes)
+    const paymentAmount = Math.min(creditor.net, debtor.net);
+
+    // Round to 2 decimal places to avoid floating point issues
+    const roundedAmount = Math.round(paymentAmount * 100) / 100;
+
+    if (roundedAmount > 0.01) { // Only add if amount is significant
+      simplifiedDebts.push({
+        from_participant_id: debtor.participant_id,
+        from_participant_name: debtor.participant_name,
+        to_participant_id: creditor.participant_id,
+        to_participant_name: creditor.participant_name,
+        amount: roundedAmount
+      });
+    }
+
+    // Update remaining amounts
+    creditor.net -= paymentAmount;
+    debtor.net -= paymentAmount;
+
+    // Move to next creditor or debtor if current one is settled
+    if (creditor.net < 0.01) i++;
+    if (debtor.net < 0.01) j++;
+  }
+
+  return simplifiedDebts;
 }
