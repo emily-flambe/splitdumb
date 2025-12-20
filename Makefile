@@ -1,4 +1,4 @@
-.PHONY: dev build test test-e2e db-init db-init-remote deploy
+.PHONY: dev build test test-e2e db-init db-init-remote deploy worktree worktree-list worktree-prune
 
 # Start local development (builds frontend + runs worker)
 dev: build db-init
@@ -30,3 +30,19 @@ db-init-remote:
 # Deploy to Cloudflare
 deploy: build
 	npx wrangler deploy
+
+# Create a new worktree for parallel development
+# Usage: make worktree BRANCH=feature-name [BASE=main]
+worktree:
+ifndef BRANCH
+	$(error BRANCH is required. Usage: make worktree BRANCH=feature-name)
+endif
+	./scripts/new-worktree.sh $(BRANCH) $(or $(BASE),main)
+
+# List all worktrees
+worktree-list:
+	git worktree list
+
+# Clean up stale worktree references
+worktree-prune:
+	git worktree prune -v

@@ -225,20 +225,23 @@ test.describe('SplitDumb E2E Tests', () => {
 
       // Capture credentials from the modal
       const tripCode = await page.locator('.credential-display .value').first().textContent();
-      const password = await page.locator('.credential-display .value').last().textContent();
+      const password = await page.locator('#modal-password-value').textContent();
       expect(tripCode).toBeTruthy();
       expect(password).toBeTruthy();
 
       // Go to trip and then back to landing
       await page.getByRole('button', { name: 'Continue to Trip' }).click();
+      await expect(page.getByRole('heading', { name: 'Join Test Trip' })).toBeVisible();
       await page.getByRole('button', { name: 'Back to home' }).click();
+      await expect(page).toHaveURL(/\/\?test=true$|\/$/);
 
       // Now join using the credentials form
       await page.getByRole('textbox', { name: /trip code/i }).fill(tripCode!);
       await page.getByRole('textbox', { name: /password/i }).fill(password!);
       await page.getByRole('button', { name: 'Join Trip' }).click();
 
-      // Verify we're on the trip page
+      // Wait for navigation to trip page, then verify heading
+      await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
       await expect(page.getByRole('heading', { name: 'Join Test Trip' })).toBeVisible();
     });
   });
