@@ -95,13 +95,19 @@ test.describe('SplitDumb E2E Tests', () => {
       await expect(page.getByText('Dinner $75.00')).toBeVisible();
       await expect(page.getByText('Paid by Alice')).toBeVisible();
 
+      // Scroll to balances section
+      await page.locator('#balances-list').scrollIntoViewIfNeeded();
+
+      // Toggle to detailed balances view (app defaults to simplified)
+      await page.getByRole('button', { name: 'Show Detailed Balances' }).click();
+
       // Verify balances: Alice gets back $50, Bob owes $25, Charlie owes $25
-      await expect(page.getByText('Alice')).toBeVisible();
-      await expect(page.getByText('gets back')).toBeVisible();
-      await expect(page.locator('.balance-item.positive')).toContainText('$50.00');
-      await expect(page.getByText('Bob')).toBeVisible();
-      await expect(page.getByText('owes')).toBeVisible();
-      await expect(page.locator('.balance-item.negative').first()).toContainText('$25.00');
+      await expect(page.locator('#balances-list .balance-item.positive')).toContainText('Alice');
+      await expect(page.locator('#balances-list .balance-item.positive')).toContainText('gets back');
+      await expect(page.locator('#balances-list .balance-item.positive')).toContainText('$50.00');
+      await expect(page.locator('#balances-list .balance-item.negative').first()).toContainText('Bob');
+      await expect(page.locator('#balances-list .balance-item.negative').first()).toContainText('owes');
+      await expect(page.locator('#balances-list .balance-item.negative').first()).toContainText('$25.00');
     });
 
     test('can delete an expense and balances update', async ({ page }) => {
@@ -304,8 +310,11 @@ test.describe('SplitDumb E2E Tests', () => {
 
       // Add three participants
       await page.getByRole('button', { name: '+ Add' }).click();
+      await expect(page.locator('#participants-list').getByText('Alice')).toBeVisible();
       await page.getByRole('button', { name: '+ Add' }).click();
+      await expect(page.locator('#participants-list').getByText('Bob')).toBeVisible();
       await page.getByRole('button', { name: '+ Add' }).click();
+      await expect(page.locator('#participants-list').getByText('Charlie')).toBeVisible();
 
       // Add expense: Alice pays $75 for dinner, split equally among all three
       await page.getByRole('textbox', { name: /what was it for/i }).fill('Dinner');
@@ -313,8 +322,14 @@ test.describe('SplitDumb E2E Tests', () => {
       await page.locator('#expense-payer').selectOption('Alice');
       await page.getByRole('button', { name: 'Add Expense' }).click();
 
+      // Wait for expense to appear
+      await expect(page.getByText('Dinner $75.00')).toBeVisible();
+
+      // Scroll to balances section
+      await page.locator('#balances-list').scrollIntoViewIfNeeded();
+
       // By default, should show simplified view
-      await expect(page.getByText('Who should pay whom:')).toBeVisible();
+      await expect(page.locator('#balances-list').getByText('Who should pay whom:')).toBeVisible();
 
       // Should show payment instructions: Bob pays Alice $25, Charlie pays Alice $25
       const balanceItems = page.locator('.balance-item.simplified');
@@ -343,7 +358,9 @@ test.describe('SplitDumb E2E Tests', () => {
       await page.getByRole('button', { name: /Create Trip/i }).click();
       await page.getByRole('button', { name: 'Continue to Trip' }).click();
       await page.getByRole('button', { name: '+ Add' }).click();
+      await expect(page.locator('#participants-list').getByText('User1')).toBeVisible();
       await page.getByRole('button', { name: '+ Add' }).click();
+      await expect(page.locator('#participants-list').getByText('User2')).toBeVisible();
 
       // Add expense
       await page.getByRole('textbox', { name: /what was it for/i }).fill('Test');
@@ -351,21 +368,27 @@ test.describe('SplitDumb E2E Tests', () => {
       await page.locator('#expense-payer').selectOption('User1');
       await page.getByRole('button', { name: 'Add Expense' }).click();
 
+      // Wait for expense to appear
+      await expect(page.getByText('Test $100.00')).toBeVisible();
+
+      // Scroll to balances section
+      await page.locator('#balances-list').scrollIntoViewIfNeeded();
+
       // Should start with simplified view
-      await expect(page.getByText('Who should pay whom:')).toBeVisible();
+      await expect(page.locator('#balances-list').getByText('Who should pay whom:')).toBeVisible();
 
       // Toggle to detailed view
       await page.getByRole('button', { name: 'Show Detailed Balances' }).click();
 
       // Should now show detailed balances
-      await expect(page.getByText('gets back')).toBeVisible();
-      await expect(page.getByText('owes')).toBeVisible();
+      await expect(page.locator('#balances-list .balance-item').getByText('gets back')).toBeVisible();
+      await expect(page.locator('#balances-list .balance-item').getByText('owes')).toBeVisible();
 
       // Toggle back to simplified
       await page.getByRole('button', { name: 'Show Simplified Payments' }).click();
 
       // Should show simplified view again
-      await expect(page.getByText('Who should pay whom:')).toBeVisible();
+      await expect(page.locator('#balances-list').getByText('Who should pay whom:')).toBeVisible();
     });
 
     test('shows correct simplified debts for complex scenario', async ({ page }) => {
@@ -385,8 +408,11 @@ test.describe('SplitDumb E2E Tests', () => {
       await page.getByRole('button', { name: /Create Trip/i }).click();
       await page.getByRole('button', { name: 'Continue to Trip' }).click();
       await page.getByRole('button', { name: '+ Add' }).click();
+      await expect(page.locator('#participants-list').getByText('Alice')).toBeVisible();
       await page.getByRole('button', { name: '+ Add' }).click();
+      await expect(page.locator('#participants-list').getByText('Bob')).toBeVisible();
       await page.getByRole('button', { name: '+ Add' }).click();
+      await expect(page.locator('#participants-list').getByText('Charlie')).toBeVisible();
 
       // Add multiple expenses
       // Alice pays $60 for all three
@@ -395,11 +421,20 @@ test.describe('SplitDumb E2E Tests', () => {
       await page.locator('#expense-payer').selectOption('Alice');
       await page.getByRole('button', { name: 'Add Expense' }).click();
 
+      // Wait for first expense to appear
+      await expect(page.getByText('Lunch $60.00')).toBeVisible();
+
       // Bob pays $30 for all three
       await page.getByRole('textbox', { name: /what was it for/i }).fill('Coffee');
       await page.getByPlaceholder('Amount').fill('30');
       await page.locator('#expense-payer').selectOption('Bob');
       await page.getByRole('button', { name: 'Add Expense' }).click();
+
+      // Wait for second expense to appear
+      await expect(page.getByText('Coffee $30.00')).toBeVisible();
+
+      // Scroll to balances section
+      await page.locator('#balances-list').scrollIntoViewIfNeeded();
 
       // The simplified debts should consolidate these:
       // Total: $90, each person should pay $30
@@ -408,7 +443,7 @@ test.describe('SplitDumb E2E Tests', () => {
       // Charlie paid $0, owes $30, net: -$30 (owes)
       // Simplified: Charlie pays Alice $30
 
-      await expect(page.getByText('Who should pay whom:')).toBeVisible();
+      await expect(page.locator('#balances-list').getByText('Who should pay whom:')).toBeVisible();
 
       // Should only have one payment instruction (Charlie → Alice)
       const balanceItems = page.locator('.balance-item.simplified');
@@ -445,8 +480,14 @@ test.describe('SplitDumb E2E Tests', () => {
       await page.locator('#expense-payer').selectOption('User1');
       await page.getByRole('button', { name: 'Add Expense' }).click();
 
-      // Should show settled message
-      await expect(page.getByText('All debts are settled!')).toBeVisible();
+      // Wait for expense to appear
+      await expect(page.getByText('Solo $10.00')).toBeVisible();
+
+      // Scroll to balances section
+      await page.locator('#balances-list').scrollIntoViewIfNeeded();
+
+      // Should show settled message in balances section
+      await expect(page.locator('#balances-list').getByText('All debts are settled!')).toBeVisible();
     });
   });
 });
