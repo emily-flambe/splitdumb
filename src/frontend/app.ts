@@ -1178,17 +1178,42 @@ async function handleEditExpenseAmount(e: Event) {
   input.focus();
   input.select();
 
+  const showError = (message: string) => {
+    const existingError = span.parentElement?.querySelector('.amount-error');
+    if (existingError) existingError.remove();
+
+    const errorEl = document.createElement('div');
+    errorEl.className = 'amount-error';
+    errorEl.textContent = message;
+    span.parentElement?.appendChild(errorEl);
+
+    setTimeout(() => errorEl.remove(), 3000);
+  };
+
   const saveAmount = async () => {
     const rawValue = input.value.trim();
-    // Validate: must be a positive number with up to 2 decimal places
-    const isValid = /^\d+(\.\d{0,2})?$/.test(rawValue) && parseFloat(rawValue) > 0;
 
-    if (!isValid) {
+    // Validate input
+    if (!rawValue) {
+      showError('Amount is required');
+      span.textContent = `$${currentAmount.toFixed(2)}`;
+      return;
+    }
+
+    if (!/^\d+(\.\d{0,2})?$/.test(rawValue)) {
+      showError('Enter a valid dollar amount (e.g., 25.00)');
       span.textContent = `$${currentAmount.toFixed(2)}`;
       return;
     }
 
     const newAmount = parseFloat(parseFloat(rawValue).toFixed(2));
+
+    if (newAmount <= 0) {
+      showError('Amount must be greater than zero');
+      span.textContent = `$${currentAmount.toFixed(2)}`;
+      return;
+    }
+
     if (newAmount === currentAmount) {
       span.textContent = `$${currentAmount.toFixed(2)}`;
       return;
@@ -1198,7 +1223,7 @@ async function handleEditExpenseAmount(e: Event) {
       await updateExpense(state.currentSlug!, expenseId, { amount: newAmount });
       await loadTripData(state.currentSlug!);
     } catch (error) {
-      alert('Failed to update expense amount');
+      showError('Failed to update amount');
       span.textContent = `$${currentAmount.toFixed(2)}`;
     }
   };

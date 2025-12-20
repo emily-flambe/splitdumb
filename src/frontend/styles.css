@@ -553,6 +553,13 @@ select:focus {
   flex: 1;
 }
 
+.expense-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  position: relative;
+}
+
 .expense-description {
   font-weight: 600;
   color: var(--text-primary);
@@ -588,6 +595,25 @@ select:focus {
   border-radius: var(--radius-sm);
   padding: 0 var(--space-xs);
   outline: none;
+}
+
+.amount-error {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--danger);
+  color: white;
+  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .expense-actions {
