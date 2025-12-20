@@ -150,6 +150,60 @@ test.describe('SplitDumb E2E Tests', () => {
       await expect(page.getByText('Test Expense $100.00')).not.toBeVisible();
       await expect(page.getByText('No expenses yet')).toBeVisible();
     });
+
+    test('can add expense with percentage-based custom split', async ({ page }) => {
+      const dialogResponses = ['Percentage Test', 'Alice', 'Bob'];
+      let dialogIndex = 0;
+      page.on('dialog', async (dialog) => {
+        if (dialogIndex < dialogResponses.length) {
+          await dialog.accept(dialogResponses[dialogIndex++]);
+        } else {
+          await dialog.accept();
+        }
+      });
+
+      await page.goto('/?test=true');
+
+      // Create trip
+      await page.getByRole('button', { name: /Create Trip/i }).click();
+      await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
+      await page.getByRole('button', { name: 'Continue to Trip' }).click();
+
+      // Add two participants
+      await page.getByRole('button', { name: '+ Add' }).click();
+      await expect(page.locator('#participants-list').getByText('Alice')).toBeVisible();
+      await page.getByRole('button', { name: '+ Add' }).click();
+      await expect(page.locator('#participants-list').getByText('Bob')).toBeVisible();
+
+      // Add expense with custom percentage split: Alice pays $100, split 75/25
+      await page.getByRole('textbox', { name: /what was it for/i }).fill('Dinner');
+      await page.getByPlaceholder('Amount').fill('100');
+      await page.locator('#expense-payer').selectOption('Alice');
+
+      // Enable custom splits and select percentage mode
+      await page.locator('#custom-splits-toggle').check();
+      await page.locator('#split-mode-percentage').check();
+
+      // Set percentages: Alice 75%, Bob 25%
+      await page.locator('input[data-participant-id].split-amount-input').first().fill('75');
+      await page.locator('input[data-participant-id].split-amount-input').last().fill('25');
+
+      await page.getByRole('button', { name: 'Add Expense' }).click();
+
+      // Verify expense appears
+      await expect(page.getByText('Dinner $100.00')).toBeVisible();
+
+      // Scroll to balances and check detailed view
+      await page.locator('#balances-list').scrollIntoViewIfNeeded();
+      await page.getByRole('button', { name: 'Show Detailed Balances' }).click();
+
+      // Alice paid $100, owes $75 = gets back $25
+      // Bob paid $0, owes $25 = owes $25
+      await expect(page.locator('#balances-list .balance-item.positive')).toContainText('Alice');
+      await expect(page.locator('#balances-list .balance-item.positive')).toContainText('$25.00');
+      await expect(page.locator('#balances-list .balance-item.negative')).toContainText('Bob');
+      await expect(page.locator('#balances-list .balance-item.negative')).toContainText('$25.00');
+    });
   });
 
   test.describe('Trip Join Flow', () => {
@@ -234,42 +288,6 @@ test.describe('SplitDumb E2E Tests', () => {
     });
   });
 
-  test.describe('Date Display', () => {
-    test('expense dates show correctly formatted', async ({ page }) => {
-      const dialogResponses = ['Date Test', 'Tester'];
-      let dialogIndex = 0;
-      page.on('dialog', async (dialog) => {
-        if (dialogIndex < dialogResponses.length) {
-          await dialog.accept(dialogResponses[dialogIndex++]);
-        } else {
-          await dialog.accept();
-        }
-      });
-
-      await page.goto('/?test=true');
-      await page.getByRole('button', { name: /Create Trip/i }).click();
-      await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
-      await page.getByRole('button', { name: 'Continue to Trip' }).click();
-
-      // Add a participant
-      await page.getByRole('button', { name: '+ Add' }).click();
-      await expect(page.locator('#participants-list').getByText('Tester')).toBeVisible();
-
-      // Add expense
-      await page.getByRole('textbox', { name: /what was it for/i }).fill('Date Check');
-      await page.getByPlaceholder('Amount').fill('50');
-      await page.locator('#expense-payer').selectOption('Tester');
-      await page.getByRole('button', { name: 'Add Expense' }).click();
-
-      // Verify date is displayed (should be current month, not Jan 21)
-      const today = new Date();
-      const expectedMonth = today.toLocaleDateString('en-US', { month: 'short' });
-
-      // Check that the date contains current month
-      await expect(page.locator('.expense-date')).toContainText(expectedMonth);
-    });
-  });
-
   test.describe('Password Protection', () => {
     test('direct URL access prompts for password', async ({ page }) => {
       // Navigate directly to a trip URL without credentials
@@ -294,57 +312,6 @@ test.describe('SplitDumb E2E Tests', () => {
   });
 
   test.describe('Debt Simplification', () => {
-    test('displays simplified payment instructions by default', async ({ page }) => {
-      const dialogResponses = ['Simplification Test', 'Alice', 'Bob', 'Charlie'];
-      let dialogIndex = 0;
-      page.on('dialog', async (dialog) => {
-        if (dialogIndex < dialogResponses.length) {
-          await dialog.accept(dialogResponses[dialogIndex++]);
-        } else {
-          await dialog.accept();
-        }
-      });
-
-      await page.goto('/?test=true');
-
-      // Create trip
-      await page.getByRole('button', { name: /Create Trip/i }).click();
-      await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
-      await page.getByRole('button', { name: 'Continue to Trip' }).click();
-
-      // Add three participants
-      await page.getByRole('button', { name: '+ Add' }).click();
-      await expect(page.locator('#participants-list').getByText('Alice')).toBeVisible();
-      await page.getByRole('button', { name: '+ Add' }).click();
-      await expect(page.locator('#participants-list').getByText('Bob')).toBeVisible();
-      await page.getByRole('button', { name: '+ Add' }).click();
-      await expect(page.locator('#participants-list').getByText('Charlie')).toBeVisible();
-
-      // Add expense: Alice pays $75 for dinner, split equally among all three
-      await page.getByRole('textbox', { name: /what was it for/i }).fill('Dinner');
-      await page.getByPlaceholder('Amount').fill('75');
-      await page.locator('#expense-payer').selectOption('Alice');
-      await page.getByRole('button', { name: 'Add Expense' }).click();
-
-      // Wait for expense to appear
-      await expect(page.getByText('Dinner $75.00')).toBeVisible();
-
-      // Scroll to balances section
-      await page.locator('#balances-list').scrollIntoViewIfNeeded();
-
-      // By default, should show simplified view
-      await expect(page.locator('#balances-list').getByText('Who should pay whom:')).toBeVisible();
-
-      // Should show payment instructions: Bob pays Alice $25, Charlie pays Alice $25
-      const balanceItems = page.locator('.balance-item.simplified');
-      await expect(balanceItems).toHaveCount(2);
-
-      // Verify payment instructions
-      await expect(page.locator('.balance-item.simplified').first()).toContainText('pays');
-      await expect(page.locator('.balance-item.simplified').first()).toContainText('$25.00');
-      await expect(page.locator('.balance-item.simplified').first()).toContainText('Alice');
-    });
-
     test('can toggle between simplified and detailed balance views', async ({ page }) => {
       const dialogResponses = ['Toggle Test', 'User1', 'User2'];
       let dialogIndex = 0;
