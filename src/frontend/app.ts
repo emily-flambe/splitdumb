@@ -894,6 +894,8 @@ function showCredentialsModal(slug: string, password: string, isNewTrip = false)
     ? '<p>Share these credentials with your friends so they can join:</p>'
     : '<p>Your trip credentials:</p>';
 
+  let currentPassword = password;
+
   showModal(
     title,
     `
@@ -904,7 +906,7 @@ function showCredentialsModal(slug: string, password: string, isNewTrip = false)
     </div>
     <div class="credential-display">
       <div class="label">Password</div>
-      <div class="value">${escapeHtml(password)}</div>
+      <div class="value"><span id="modal-password-value">${escapeHtml(password)}</span> <button class="btn-edit-inline" id="edit-password-btn" aria-label="Edit password">✏️</button></div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-primary" id="copy-credentials-btn">Copy Share Message</button>
@@ -913,11 +915,28 @@ function showCredentialsModal(slug: string, password: string, isNewTrip = false)
   `
   );
 
+  document.getElementById('edit-password-btn')?.addEventListener('click', async () => {
+    const newPassword = prompt('Enter new password:', currentPassword);
+    if (!newPassword?.trim() || newPassword.trim() === currentPassword) return;
+
+    try {
+      await updateTrip(slug, { password: newPassword.trim() });
+      currentPassword = newPassword.trim();
+      const passwordDisplay = document.getElementById('modal-password-value');
+      if (passwordDisplay) {
+        passwordDisplay.textContent = currentPassword;
+      }
+      saveCredentials(slug, currentPassword);
+    } catch (error) {
+      alert('Failed to update password. Please try again.');
+    }
+  });
+
   document.getElementById('copy-credentials-btn')?.addEventListener('click', () => {
     const shareMessage = `Join my trip on SplitDumb!
 
 https://splitdumb.emilycogsdill.com/${slug}
-Password: ${password}
+Password: ${currentPassword}
 
 (it's super secure don't worry)`;
 
