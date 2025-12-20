@@ -1,6 +1,7 @@
 name = "splitdumb"
 main = "src/index.ts"
 compatibility_date = "2025-12-15"
+account_id = "facf6619808dc039df729531bbb26d1d"
 
 [[routes]]
 pattern = "splitdumb.emilycogsdill.com"
