@@ -9,6 +9,7 @@ import {
   addParticipant,
   deleteParticipant,
   createExpense,
+  updateExpense,
   deleteExpense,
   getExpenses,
   getBalances,
@@ -1130,7 +1131,7 @@ function renderExpenses() {
           <div class="expense-info">
             <div class="expense-header">
               <span class="expense-description">${escapeHtml(expense.description)}</span>
-              <span class="expense-amount">$${expense.amount.toFixed(2)}</span>
+              <span class="expense-amount" data-expense-id="${expense.id}" data-amount="${expense.amount}">$${expense.amount.toFixed(2)}</span>
             </div>
             <div class="expense-meta">
               <span class="expense-payer">Paid by ${escapeHtml(expense.payer_name)}</span>
@@ -1151,6 +1152,65 @@ function renderExpenses() {
         await handleDeleteExpense(expenseId);
       }
     });
+  });
+
+  // Add click-to-edit handlers for expense amounts
+  expensesList.querySelectorAll('.expense-amount').forEach((span) => {
+    span.addEventListener('click', handleEditExpenseAmount);
+  });
+}
+
+async function handleEditExpenseAmount(e: Event) {
+  const span = e.target as HTMLSpanElement;
+  if (span.querySelector('input')) return; // Already editing
+
+  const expenseId = parseInt(span.dataset.expenseId || '0');
+  const currentAmount = parseFloat(span.dataset.amount || '0');
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'expense-amount-input';
+  input.value = currentAmount.toFixed(2);
+  input.pattern = '^\\d+(\\.\\d{0,2})?$';
+
+  span.textContent = '$';
+  span.appendChild(input);
+  input.focus();
+  input.select();
+
+  const saveAmount = async () => {
+    const rawValue = input.value.trim();
+    // Validate: must be a positive number with up to 2 decimal places
+    const isValid = /^\d+(\.\d{0,2})?$/.test(rawValue) && parseFloat(rawValue) > 0;
+
+    if (!isValid) {
+      span.textContent = `$${currentAmount.toFixed(2)}`;
+      return;
+    }
+
+    const newAmount = parseFloat(parseFloat(rawValue).toFixed(2));
+    if (newAmount === currentAmount) {
+      span.textContent = `$${currentAmount.toFixed(2)}`;
+      return;
+    }
+
+    try {
+      await updateExpense(state.currentSlug!, expenseId, { amount: newAmount });
+      await loadTripData(state.currentSlug!);
+    } catch (error) {
+      alert('Failed to update expense amount');
+      span.textContent = `$${currentAmount.toFixed(2)}`;
+    }
+  };
+
+  input.addEventListener('blur', saveAmount);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      input.blur();
+    } else if (e.key === 'Escape') {
+      span.textContent = `$${currentAmount.toFixed(2)}`;
+    }
   });
 }
 

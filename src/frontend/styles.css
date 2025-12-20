@@ -569,6 +569,25 @@ select:focus {
   font-weight: 700;
   color: var(--accent-teal);
   font-family: var(--font-sans);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.expense-amount:hover {
+  opacity: 0.8;
+}
+
+.expense-amount-input {
+  width: 80px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent-teal);
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  border: 1px solid var(--accent-teal);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--space-xs);
+  outline: none;
 }
 
 .expense-actions {
