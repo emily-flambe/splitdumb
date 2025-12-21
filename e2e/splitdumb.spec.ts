@@ -111,6 +111,63 @@ test.describe('SplitDumb E2E Tests', () => {
       await expect(page.locator('#balances-list .balance-item.negative').first()).toContainText('$25.00');
     });
 
+    test('can edit an expense via modal', async ({ page }) => {
+      const dialogResponses = ['Edit Modal Test', 'TestUser'];
+      let dialogIndex = 0;
+      page.on('dialog', async (dialog) => {
+        if (dialogIndex < dialogResponses.length) {
+          await dialog.accept(dialogResponses[dialogIndex++]);
+        } else {
+          await dialog.accept();
+        }
+      });
+
+      await page.goto('/?test=true');
+
+      // Create trip
+      await page.getByRole('button', { name: /Create Trip/i }).click();
+      await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
+      await page.getByRole('button', { name: 'Continue to Trip' }).click();
+
+      // Add a participant
+      await page.getByRole('button', { name: '+ Add' }).click();
+      await expect(page.locator('#participants-list').getByText('TestUser')).toBeVisible();
+
+      // Add an expense
+      await page.getByRole('textbox', { name: /what was it for/i }).fill('Original Expense');
+      await page.getByPlaceholder('Amount').fill('100');
+      await page.locator('#expense-payer').selectOption('TestUser');
+      await page.getByRole('button', { name: 'Add Expense' }).click();
+
+      // Verify expense appears
+      await expect(page.getByText('Original Expense')).toBeVisible();
+      await expect(page.getByText('$100.00')).toBeVisible();
+
+      // Wait for the expense item to be ready and click on it to open edit modal
+      const expenseItem = page.locator('.expense-item');
+      await expenseItem.waitFor({ state: 'visible' });
+      await expenseItem.click();
+
+      // Verify edit modal opens with correct title
+      await expect(page.getByRole('heading', { name: 'Edit Expense' })).toBeVisible();
+
+      // Verify form is pre-populated
+      await expect(page.locator('#edit-expense-description')).toHaveValue('Original Expense');
+      await expect(page.locator('#edit-expense-amount')).toHaveValue('100.00');
+
+      // Edit the values
+      await page.locator('#edit-expense-description').fill('Updated Expense');
+      await page.locator('#edit-expense-amount').fill('75.50');
+
+      // Save changes
+      await page.getByRole('button', { name: 'Save Changes' }).click();
+
+      // Verify modal closes and expense is updated
+      await expect(page.getByRole('heading', { name: 'Edit Expense' })).not.toBeVisible();
+      await expect(page.getByText('Updated Expense')).toBeVisible();
+      await expect(page.getByText('$75.50')).toBeVisible();
+    });
+
     test('can delete an expense and balances update', async ({ page }) => {
       const dialogResponses = ['Delete Test', 'TestUser'];
       let dialogIndex = 0;

@@ -9,6 +9,7 @@ import {
   addParticipant,
   deleteParticipant,
   createExpense,
+  updateExpense,
   deleteExpense,
   getExpenses,
   getBalances,
@@ -1145,7 +1146,7 @@ function renderExpenses() {
       });
 
       return `
-        <li class="expense-item">
+        <li class="expense-item" data-expense-id="${expense.id}">
           <div class="expense-info">
             <div class="expense-header">
               <span class="expense-description">${escapeHtml(expense.description)}</span>
@@ -1165,12 +1166,212 @@ function renderExpenses() {
   // Add delete handlers
   expensesList.querySelectorAll('.btn-delete').forEach((btn) => {
     btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
       const expenseId = parseInt((e.target as HTMLElement).dataset.expenseId || '0');
       if (expenseId && confirm('Delete this expense?')) {
         await handleDeleteExpense(expenseId);
       }
     });
   });
+
+  // Add click-to-edit handlers for expense items
+  expensesList.querySelectorAll('.expense-item').forEach((item) => {
+    item.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains('btn-delete')) return;
+      const expenseId = parseInt((item as HTMLElement).dataset.expenseId || '0');
+      const expense = state.expenses.find((exp) => exp.id === expenseId);
+      if (expense) {
+        showEditExpenseModal(expense);
+      }
+    });
+  });
+}
+
+function showEditExpenseModal(expense: ExpenseWithSplits) {
+  if (!state.trip) return;
+
+  const participantOptions = state.trip.participants
+    .map((p) => `<option value="${p.id}" ${p.id === expense.paid_by ? 'selected' : ''}>${escapeHtml(p.name)}</option>`)
+    .join('');
+
+  const participantCheckboxesHtml = state.trip.participants
+    .map((p) => {
+      const split = expense.splits.find((s) => s.participant_id === p.id);
+      const isChecked = split ? 'checked' : '';
+      return `
+        <label class="checkbox-label">
+          <input type="checkbox" class="edit-participant-checkbox" value="${p.id}" ${isChecked}>
+          <span>${escapeHtml(p.name)}</span>
+        </label>
+      `;
+    })
+    .join('');
+
+  const customSplitInputsHtml = state.trip.participants
+    .map((p) => {
+      const split = expense.splits.find((s) => s.participant_id === p.id);
+      return `
+        <div class="custom-split-row">
+          <label>${escapeHtml(p.name)}</label>
+          <input type="number" class="edit-split-input" data-participant-id="${p.id}"
+                 value="${split ? split.amount.toFixed(2) : ''}" placeholder="0.00" step="0.01" min="0">
+        </div>
+      `;
+    })
+    .join('');
+
+  const hasCustomSplits = !areEqualSplits(expense);
+
+  showModal(
+    'Edit Expense',
+    `
+    <form id="edit-expense-form" class="expense-form">
+      <div class="form-row">
+        <input type="text" id="edit-expense-description" value="${escapeHtml(expense.description)}" placeholder="What was it for?" required>
+        <input type="number" id="edit-expense-amount" value="${expense.amount.toFixed(2)}" placeholder="Amount" step="0.01" min="0" required>
+      </div>
+      <div class="form-row">
+        <select id="edit-expense-payer" required>
+          ${participantOptions}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="edit-custom-splits-toggle" ${hasCustomSplits ? 'checked' : ''}>
+          <span>Custom split amounts</span>
+        </label>
+      </div>
+      <div id="edit-participants-selection" class="participants-selection" style="${hasCustomSplits ? 'display: none;' : ''}">
+        <p class="helper-text">Select who this expense is for:</p>
+        <div id="edit-participant-checkboxes" class="checkbox-grid">
+          ${participantCheckboxesHtml}
+        </div>
+      </div>
+      <div id="edit-custom-splits" class="custom-splits" style="${hasCustomSplits ? '' : 'display: none;'}">
+        <p class="helper-text">Enter custom amounts for each person:</p>
+        <div id="edit-custom-split-inputs" class="custom-split-inputs">
+          ${customSplitInputsHtml}
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <button type="button" id="cancel-edit-btn" class="btn btn-secondary">Cancel</button>
+      </div>
+    </form>
+    `
+  );
+
+  // Toggle custom splits visibility
+  const customToggle = document.getElementById('edit-custom-splits-toggle') as HTMLInputElement;
+  const participantsSection = document.getElementById('edit-participants-selection') as HTMLDivElement;
+  const customSplitsSection = document.getElementById('edit-custom-splits') as HTMLDivElement;
+
+  customToggle?.addEventListener('change', () => {
+    if (customToggle.checked) {
+      participantsSection.style.display = 'none';
+      customSplitsSection.style.display = 'block';
+    } else {
+      participantsSection.style.display = 'block';
+      customSplitsSection.style.display = 'none';
+    }
+  });
+
+  // Handle form submission
+  const form = document.getElementById('edit-expense-form') as HTMLFormElement;
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await handleEditExpenseSubmit(expense.id);
+  });
+
+  // Cancel button
+  document.getElementById('cancel-edit-btn')?.addEventListener('click', hideModal);
+}
+
+function areEqualSplits(expense: ExpenseWithSplits): boolean {
+  if (expense.splits.length === 0) return true;
+  const expectedAmount = expense.amount / expense.splits.length;
+  return expense.splits.every((s) => Math.abs(s.amount - expectedAmount) < 0.01);
+}
+
+async function handleEditExpenseSubmit(expenseId: number) {
+  if (!state.currentSlug || !state.trip) return;
+
+  const description = (document.getElementById('edit-expense-description') as HTMLInputElement).value.trim();
+  const amount = parseFloat((document.getElementById('edit-expense-amount') as HTMLInputElement).value);
+  const paidBy = parseInt((document.getElementById('edit-expense-payer') as HTMLSelectElement).value);
+  const customToggle = document.getElementById('edit-custom-splits-toggle') as HTMLInputElement;
+
+  if (!description) {
+    alert('Please enter a description');
+    return;
+  }
+
+  if (!amount || amount <= 0) {
+    alert('Please enter a valid amount');
+    return;
+  }
+
+  let splits: { participant_id: number; amount: number }[];
+
+  if (customToggle.checked) {
+    // Custom splits mode
+    splits = [];
+    const splitInputs = document.querySelectorAll('.edit-split-input') as NodeListOf<HTMLInputElement>;
+
+    for (const input of splitInputs) {
+      const splitAmount = parseFloat(input.value);
+      if (splitAmount > 0) {
+        splits.push({
+          participant_id: parseInt(input.dataset.participantId || '0'),
+          amount: splitAmount,
+        });
+      }
+    }
+
+    if (splits.length === 0) {
+      alert('Please enter at least one split amount');
+      return;
+    }
+
+    const totalSplits = splits.reduce((sum, split) => sum + split.amount, 0);
+    if (Math.abs(totalSplits - amount) > 0.01) {
+      alert(`Split amounts ($${totalSplits.toFixed(2)}) must equal expense amount ($${amount.toFixed(2)})`);
+      return;
+    }
+  } else {
+    // Equal split mode
+    const checkboxes = document.querySelectorAll('.edit-participant-checkbox:checked') as NodeListOf<HTMLInputElement>;
+
+    if (checkboxes.length === 0) {
+      alert('Please select at least one participant to split with');
+      return;
+    }
+
+    const splitAmount = amount / checkboxes.length;
+    splits = Array.from(checkboxes).map((checkbox) => ({
+      participant_id: parseInt(checkbox.value),
+      amount: splitAmount,
+    }));
+  }
+
+  try {
+    await updateExpense(state.currentSlug, expenseId, {
+      description,
+      amount,
+      paid_by: paidBy,
+      splits,
+    });
+
+    hideModal();
+    await loadTripData(state.currentSlug);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      alert(`Failed to update expense: ${error.message}`);
+    } else {
+      alert('Failed to update expense. Please try again.');
+    }
+  }
 }
 
 export {};

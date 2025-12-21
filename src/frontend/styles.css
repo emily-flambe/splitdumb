@@ -574,6 +574,12 @@ select:focus {
   flex: 1;
 }
 
+.expense-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
 .expense-description {
   font-weight: 600;
   color: var(--text-primary);
