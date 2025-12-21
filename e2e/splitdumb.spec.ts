@@ -139,9 +139,9 @@ test.describe('SplitDumb E2E Tests', () => {
       await page.locator('#expense-payer').selectOption('TestUser');
       await page.getByRole('button', { name: 'Add Expense' }).click();
 
-      // Verify expense appears
-      await expect(page.getByText('Original Expense')).toBeVisible();
-      await expect(page.getByText('$100.00')).toBeVisible();
+      // Verify expense appears in expenses list (use specific selector to avoid matching event log)
+      await expect(page.locator('#expenses-list .expense-description').getByText('Original Expense')).toBeVisible();
+      await expect(page.locator('#expenses-list').getByText('$100.00')).toBeVisible();
 
       // Wait for the expense item to be ready and click on it to open edit modal
       const expenseItem = page.locator('.expense-item');
@@ -162,10 +162,10 @@ test.describe('SplitDumb E2E Tests', () => {
       // Save changes
       await page.getByRole('button', { name: 'Save Changes' }).click();
 
-      // Verify modal closes and expense is updated
+      // Verify modal closes and expense is updated (use specific selector)
       await expect(page.getByRole('heading', { name: 'Edit Expense' })).not.toBeVisible();
-      await expect(page.getByText('Updated Expense')).toBeVisible();
-      await expect(page.getByText('$75.50')).toBeVisible();
+      await expect(page.locator('#expenses-list .expense-description').getByText('Updated Expense')).toBeVisible();
+      await expect(page.locator('#expenses-list').getByText('$75.50')).toBeVisible();
     });
 
     test('can delete an expense and balances update', async ({ page }) => {
