@@ -19,7 +19,9 @@ app.post('/', async (c) => {
       return c.json({ error: 'Participant name is required' }, 400);
     }
 
-    const participant = await db.createParticipant(c.env.DB, trip.id, body.name.trim());
+    const name = body.name.trim();
+    const participant = await db.createParticipant(c.env.DB, trip.id, name);
+    await db.createEventLog(c.env.DB, trip.id, 'PARTICIPANT_ADDED', `${name} was added to trip`);
     return c.json(participant, 201);
   } catch (error: any) {
     if (error.message?.includes('UNIQUE constraint')) {
@@ -33,9 +35,16 @@ app.post('/', async (c) => {
 // DELETE /api/trips/:slug/participants/:id - Remove participant
 app.delete('/:id', async (c) => {
   try {
+    const trip = c.get('trip');
     const id = parseInt(c.req.param('id'));
     if (isNaN(id)) {
       return c.json({ error: 'Invalid participant ID' }, 400);
+    }
+
+    // Get participant name before deletion for event log
+    const participant = await db.getParticipantById(c.env.DB, id);
+    if (!participant) {
+      return c.json({ error: 'Participant not found' }, 404);
     }
 
     const deleted = await db.deleteParticipant(c.env.DB, id);
@@ -43,6 +52,7 @@ app.delete('/:id', async (c) => {
       return c.json({ error: 'Participant not found' }, 404);
     }
 
+    await db.createEventLog(c.env.DB, trip.id, 'PARTICIPANT_REMOVED', `${participant.name} was removed from trip`);
     return c.json({ success: true, message: 'Participant deleted' });
   } catch (error) {
     console.error('Error deleting participant:', error);

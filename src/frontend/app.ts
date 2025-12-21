@@ -1,5 +1,5 @@
 // src/frontend/app.ts
-import type { TripWithParticipants, Participant, ExpenseWithSplits, Balance, SimplifiedDebt } from '../types';
+import type { TripWithParticipants, Participant, ExpenseWithSplits, Balance, SimplifiedDebt, EventLog } from '../types';
 import {
   createTrip,
   authTrip,
@@ -14,6 +14,7 @@ import {
   getExpenses,
   getBalances,
   getSimplifiedDebts,
+  getEvents,
   getCredentials,
   saveCredentials,
   clearCredentials,
@@ -38,6 +39,7 @@ interface AppState {
   expenses: ExpenseWithSplits[];
   balances: Balance[];
   simplifiedDebts: SimplifiedDebt[];
+  events: EventLog[];
   showSimplified: boolean;
   loading: boolean;
   adminPassword: string | null;
@@ -52,6 +54,7 @@ const state: AppState = {
   expenses: [],
   balances: [],
   simplifiedDebts: [],
+  events: [],
   showSimplified: true,
   loading: false,
   adminPassword: null,
@@ -88,6 +91,7 @@ const splitModePercentage = document.getElementById('split-mode-percentage') as 
 const customSplitsHelper = document.getElementById('custom-splits-helper') as HTMLParagraphElement;
 const expensesList = document.getElementById('expenses-list') as HTMLUListElement;
 const balancesList = document.getElementById('balances-list') as HTMLDivElement;
+const eventLog = document.getElementById('event-log') as HTMLDivElement;
 
 // Modal elements
 const modalOverlay = document.getElementById('modal-overlay') as HTMLDivElement;
@@ -252,20 +256,23 @@ async function loadTripData(slug: string) {
   state.loading = true;
 
   try {
-    const [trip, balances, simplifiedDebts, expenses] = await Promise.all([
+    const [trip, balances, simplifiedDebts, expenses, events] = await Promise.all([
       getTrip(slug),
       getBalances(slug),
       getSimplifiedDebts(slug),
       getExpenses(slug),
+      getEvents(slug),
     ]);
 
     state.trip = trip;
     state.balances = balances;
     state.simplifiedDebts = simplifiedDebts;
     state.expenses = expenses;
+    state.events = events;
 
     renderTripView();
     renderExpenses();
+    renderEvents();
   } catch (error) {
     if (error instanceof ApiError) {
       if (error.status === 401) {
@@ -1372,6 +1379,43 @@ async function handleEditExpenseSubmit(expenseId: number) {
       alert('Failed to update expense. Please try again.');
     }
   }
+}
+
+function renderEvents() {
+  if (state.events.length === 0) {
+    eventLog.innerHTML = '<div class="empty-state">No activity yet</div>';
+    return;
+  }
+
+  eventLog.innerHTML = state.events
+    .map((event) => {
+      const date = new Date(event.created_at * 1000);
+      const timeStr = formatRelativeTime(date);
+
+      return `
+        <div class="event-item">
+          <span class="event-description">${escapeHtml(event.description)}</span>
+          <span class="event-time">${timeStr}</span>
+        </div>
+      `;
+    })
+    .join('');
+}
+
+function formatRelativeTime(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffSecs / 60);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffSecs < 60) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 export {};

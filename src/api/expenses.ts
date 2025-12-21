@@ -48,6 +48,7 @@ app.post('/', async (c) => {
     }
 
     const expense = await db.createExpense(c.env.DB, trip.id, body);
+    await db.createEventLog(c.env.DB, trip.id, 'EXPENSE_ADDED', `"${body.description}" ($${body.amount.toFixed(2)}) was added`);
     const expenseWithSplits = await db.getExpenseWithSplits(c.env.DB, expense.id);
     return c.json(expenseWithSplits, 201);
   } catch (error) {
@@ -59,6 +60,7 @@ app.post('/', async (c) => {
 // PUT /api/trips/:slug/expenses/:id - Update expense
 app.put('/:id', async (c) => {
   try {
+    const trip = c.get('trip');
     const id = parseInt(c.req.param('id'));
     if (isNaN(id)) {
       return c.json({ error: 'Invalid expense ID' }, 400);
@@ -79,6 +81,7 @@ app.put('/:id', async (c) => {
       return c.json({ error: 'Expense not found' }, 404);
     }
 
+    await db.createEventLog(c.env.DB, trip.id, 'EXPENSE_MODIFIED', `"${expense.description}" was modified`);
     const expenseWithSplits = await db.getExpenseWithSplits(c.env.DB, expense.id);
     return c.json(expenseWithSplits);
   } catch (error) {
@@ -90,9 +93,16 @@ app.put('/:id', async (c) => {
 // DELETE /api/trips/:slug/expenses/:id - Delete expense
 app.delete('/:id', async (c) => {
   try {
+    const trip = c.get('trip');
     const id = parseInt(c.req.param('id'));
     if (isNaN(id)) {
       return c.json({ error: 'Invalid expense ID' }, 400);
+    }
+
+    // Get expense description before deletion for event log
+    const expense = await db.getExpenseById(c.env.DB, id);
+    if (!expense) {
+      return c.json({ error: 'Expense not found' }, 404);
     }
 
     const deleted = await db.deleteExpense(c.env.DB, id);
@@ -100,6 +110,7 @@ app.delete('/:id', async (c) => {
       return c.json({ error: 'Expense not found' }, 404);
     }
 
+    await db.createEventLog(c.env.DB, trip.id, 'EXPENSE_DELETED', `"${expense.description}" was deleted`);
     return c.json({ success: true, message: 'Expense deleted' });
   } catch (error) {
     console.error('Error deleting expense:', error);

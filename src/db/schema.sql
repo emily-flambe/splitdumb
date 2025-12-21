@@ -46,8 +46,20 @@ CREATE TABLE IF NOT EXISTS expense_splits (
   UNIQUE(expense_id, participant_id)
 );
 
+-- Event log for trip activity
+CREATE TABLE IF NOT EXISTS event_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  trip_id INTEGER NOT NULL,
+  action TEXT NOT NULL,
+  description TEXT NOT NULL,
+  created_at INTEGER DEFAULT (unixepoch()),
+  FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_participants_trip ON participants(trip_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_trip ON expenses(trip_id);
 CREATE INDEX IF NOT EXISTS idx_expense_splits_expense ON expense_splits(expense_id);
 CREATE INDEX IF NOT EXISTS idx_trips_slug ON trips(slug);
+CREATE INDEX IF NOT EXISTS idx_event_logs_trip ON event_logs(trip_id);
+CREATE INDEX IF NOT EXISTS idx_event_logs_created ON event_logs(created_at);
