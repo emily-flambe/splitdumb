@@ -32,8 +32,8 @@ test.describe('SplitDumb E2E Tests', () => {
 
       // Verify credentials modal appears
       await expect(page.getByRole('heading', { name: 'Trip Created!' })).toBeVisible();
-      await expect(page.getByText('Trip Code')).toBeVisible();
-      await expect(page.getByText('Password')).toBeVisible();
+      await expect(page.locator('.modal').getByText('Trip Code')).toBeVisible();
+      await expect(page.locator('.modal').getByText('Password', { exact: true })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Continue to Trip' })).toBeVisible();
     });
   });
@@ -304,7 +304,7 @@ test.describe('SplitDumb E2E Tests', () => {
   });
 
   test.describe('Share Functionality', () => {
-    test('share button copies to clipboard', async ({ page, context }) => {
+    test('copy button copies to clipboard and shows feedback', async ({ page, context }) => {
       // Grant clipboard permissions
       await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
@@ -317,11 +317,15 @@ test.describe('SplitDumb E2E Tests', () => {
       await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
       await page.getByRole('button', { name: 'Continue to Trip' }).click();
 
-      // Click share button - should show alert
-      await page.getByRole('button', { name: /Share Trip/i }).click();
+      // Verify share box shows credentials
+      await expect(page.locator('#share-code')).not.toHaveText('---');
+      await expect(page.locator('#share-password')).not.toHaveText('---');
 
-      // The share action triggers an alert, we auto-accept it
-      // If we got here without error, the share worked
+      // Click copy button
+      await page.getByRole('button', { name: 'Copy' }).click();
+
+      // Verify "Copied!" feedback appears
+      await expect(page.locator('#copy-feedback')).toHaveClass(/show/);
     });
   });
 
@@ -343,8 +347,8 @@ test.describe('SplitDumb E2E Tests', () => {
       // View credentials
       await page.getByText('View Credentials').click();
       await expect(page.getByRole('heading', { name: 'Trip Credentials' })).toBeVisible();
-      await expect(page.getByText('Trip Code')).toBeVisible();
-      await expect(page.getByText('Password')).toBeVisible();
+      await expect(page.locator('.modal').getByText('Trip Code')).toBeVisible();
+      await expect(page.locator('.modal').getByText('Password', { exact: true })).toBeVisible();
     });
   });
 

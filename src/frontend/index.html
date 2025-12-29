@@ -88,10 +88,20 @@
           <h1 id="trip-name" class="trip-title">Loading...</h1>
           <button id="settings-btn" class="icon-btn" aria-label="Settings">⚙</button>
         </div>
-        <button id="share-btn" class="btn btn-share">
-          <span class="share-icon">🔗</span>
-          Share Trip
-        </button>
+        <div id="share-box" class="share-box">
+          <div class="share-info">
+            <div class="share-row">
+              <span class="share-label">Code:</span>
+              <span id="share-code" class="share-value">---</span>
+            </div>
+            <div class="share-row">
+              <span class="share-label">Password:</span>
+              <span id="share-password" class="share-value">---</span>
+            </div>
+          </div>
+          <button id="share-btn" class="btn btn-copy">Copy</button>
+          <span id="copy-feedback" class="copy-feedback">Copied!</span>
+        </div>
       </header>
 
       <div class="trip-layout">

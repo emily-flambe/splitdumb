@@ -75,6 +75,9 @@ const tripPasswordInput = document.getElementById('trip-password') as HTMLInputE
 const backBtn = document.getElementById('back-btn') as HTMLButtonElement;
 const tripNameDisplay = document.getElementById('trip-name') as HTMLHeadingElement;
 const shareBtn = document.getElementById('share-btn') as HTMLButtonElement;
+const shareCode = document.getElementById('share-code') as HTMLSpanElement;
+const sharePassword = document.getElementById('share-password') as HTMLSpanElement;
+const copyFeedback = document.getElementById('copy-feedback') as HTMLSpanElement;
 const settingsBtn = document.getElementById('settings-btn') as HTMLButtonElement;
 const participantsList = document.getElementById('participants-list') as HTMLUListElement;
 const addParticipantBtn = document.getElementById('add-participant-btn') as HTMLButtonElement;
@@ -296,6 +299,13 @@ function renderTripView() {
 
   // Update trip name
   tripNameDisplay.textContent = state.trip.name;
+
+  // Update share box with credentials
+  const credentials = getCredentials();
+  if (credentials) {
+    shareCode.textContent = credentials.slug;
+    sharePassword.textContent = credentials.password;
+  }
 
   // Render participants
   renderParticipants();
@@ -666,10 +676,7 @@ function handleShareTrip() {
   if (!state.currentSlug) return;
 
   const credentials = getCredentials();
-  if (!credentials) {
-    alert('Unable to share trip - credentials not found');
-    return;
-  }
+  if (!credentials) return;
 
   const shareMessage = `Join my trip on SplitDumb!
 
@@ -682,7 +689,11 @@ Password: ${credentials.password}
   navigator.clipboard
     .writeText(shareMessage)
     .then(() => {
-      alert('Share link copied to clipboard!');
+      // Show "Copied!" feedback
+      copyFeedback.classList.add('show');
+      setTimeout(() => {
+        copyFeedback.classList.remove('show');
+      }, 2000);
     })
     .catch(() => {
       // Fallback: show the message

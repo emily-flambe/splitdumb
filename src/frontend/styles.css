@@ -311,17 +311,59 @@ select:focus {
   border-color: var(--accent-teal);
 }
 
-.btn-share {
+.share-box {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
   background: var(--bg-elevated);
-  color: var(--text-primary);
-  border: 2px solid var(--border);
-  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
   margin-top: var(--space-md);
 }
 
-.btn-share:hover {
-  border-color: var(--accent-purple);
-  background: var(--accent-purple-glow);
+.share-info {
+  display: flex;
+  gap: var(--space-lg);
+}
+
+.share-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.share-label {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.share-value {
+  color: var(--text-primary);
+  font-family: monospace;
+  font-size: 0.875rem;
+}
+
+.btn-copy {
+  padding: var(--space-xs) var(--space-md);
+  font-size: 0.8125rem;
+  background: var(--accent-teal);
+  color: var(--bg-primary);
+}
+
+.btn-copy:hover {
+  background: var(--accent-teal-bright);
+}
+
+.copy-feedback {
+  color: var(--accent-teal);
+  font-size: 0.75rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.copy-feedback.show {
+  opacity: 1;
 }
 
 .arrow {
