@@ -88,12 +88,25 @@
           <h1 id="trip-name" class="trip-title">Loading...</h1>
           <button id="settings-btn" class="icon-btn" aria-label="Settings">⚙</button>
         </div>
-        <button id="share-btn" class="btn btn-share">
-          <span class="share-icon">🔗</span>
-          Share Trip
-        </button>
+        <div id="share-box" class="share-box">
+          <div class="share-info">
+            <div class="share-row">
+              <span class="share-label">URL:</span>
+              <a id="share-url" class="share-value share-link" href="#" target="_blank">---</a>
+            </div>
+            <div class="share-row">
+              <span class="share-label">Password:</span>
+              <span id="share-password" class="share-value">---</span>
+            </div>
+          </div>
+          <div class="share-actions">
+            <button id="share-btn" class="btn btn-copy">Copy to Clipboard</button>
+            <span id="copy-feedback" class="copy-feedback">Copied!</span>
+          </div>
+        </div>
       </header>
 
+      <div class="trip-layout">
       <div class="trip-content">
         <!-- Participants Section -->
         <section class="section participants-section">
@@ -219,6 +232,15 @@
           </section>
         </div>
       </div>
+      </div>
+
+      <!-- Activity Log -->
+      <section class="activity-section">
+        <h2>Activity</h2>
+        <div id="event-log" class="event-log">
+          <div class="empty-state">No activity yet</div>
+        </div>
+      </section>
     </section>
   </div>
 

@@ -311,17 +311,85 @@ select:focus {
   border-color: var(--accent-teal);
 }
 
-.btn-share {
+.share-box {
   background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-top: var(--space-sm);
+  max-width: 540px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: left !important;
+}
+
+.share-box .share-info,
+.share-box .share-row,
+.share-box .share-label,
+.share-box .share-value,
+.share-box .share-link {
+  text-align: left !important;
+}
+
+.share-info {
+  margin-bottom: var(--space-sm);
+}
+
+.share-row {
+  margin-bottom: 6px;
+}
+
+.share-label {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.share-value {
   color: var(--text-primary);
-  border: 2px solid var(--border);
-  width: 100%;
+  font-family: monospace;
+  font-size: 0.875rem;
+  display: block;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.share-link {
+  color: var(--accent-teal);
+  text-decoration: none;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.share-link:hover {
+  text-decoration: underline;
+}
+
+.share-actions {
   margin-top: var(--space-md);
 }
 
-.btn-share:hover {
-  border-color: var(--accent-purple);
-  background: var(--accent-purple-glow);
+.btn-copy {
+  padding: var(--space-xs) var(--space-md);
+  font-size: 0.8125rem;
+  background: var(--accent-teal);
+  color: var(--bg-primary);
+}
+
+.btn-copy:hover {
+  background: var(--accent-teal-bright);
+}
+
+.copy-feedback {
+  color: var(--accent-teal);
+  font-size: 0.75rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.copy-feedback.show {
+  opacity: 1;
 }
 
 .arrow {
@@ -354,11 +422,7 @@ select:focus {
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border);
   padding: var(--space-lg);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  backdrop-filter: blur(10px);
-  background: rgba(21, 27, 58, 0.9);
+  text-align: center;
 }
 
 .header-top {
@@ -369,17 +433,22 @@ select:focus {
 }
 
 .trip-title {
-  font-size: 1.5rem;
+  font-size: 2.5rem;
   font-weight: 700;
   flex: 1;
   text-align: center;
   letter-spacing: -0.02em;
 }
 
-.trip-content {
-  max-width: 800px;
+/* Trip Layout with Sidebar */
+.trip-layout {
+  max-width: 700px;
   margin: 0 auto;
   padding: var(--space-xl);
+}
+
+.trip-content {
+  width: 100%;
 }
 
 /* Sections */
@@ -695,31 +764,6 @@ select:focus {
 
 .balance-item.neutral .balance-amount {
   color: var(--text-muted);
-}
-
-/* Balance toggle */
-.balance-toggle {
-  margin-bottom: var(--space-lg);
-  text-align: center;
-}
-
-.toggle-btn {
-  padding: 0.625rem 1.25rem;
-  border: 2px solid var(--border);
-  border-radius: var(--radius-full);
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-base);
-}
-
-.toggle-btn:hover {
-  border-color: var(--accent-teal);
-  color: var(--accent-teal);
-  background: var(--accent-teal-glow);
 }
 
 /* Simplified debts */
@@ -1212,4 +1256,47 @@ select:focus {
 
 .payment-item .btn-delete-payment:hover {
   color: var(--danger);
+}
+
+/* Activity Section */
+.activity-section {
+  max-width: 600px;
+  margin: var(--space-xl) auto;
+  padding: 0 var(--space-lg);
+}
+
+.activity-section h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: var(--space-md);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.event-log {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.event-item {
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--text-primary);
+  border-left: 3px solid var(--accent-teal);
+}
+
+.event-item .event-time {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  margin-top: var(--space-xs);
 }

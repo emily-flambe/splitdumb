@@ -5,6 +5,7 @@ import type {
   Expense,
   ExpenseSplit,
   Payment,
+  EventLog,
   CreateTripRequest,
   UpdateTripRequest,
   CreatePaymentRequest,
@@ -519,4 +520,35 @@ export async function getSimplifiedDebts(db: D1Database, tripId: number): Promis
   }
 
   return simplifiedDebts;
+}
+
+// ============================================================================
+// EVENT LOGS
+// ============================================================================
+
+export async function createEventLog(
+  db: D1Database,
+  tripId: number,
+  action: string,
+  description: string
+): Promise<EventLog> {
+  const now = Math.floor(Date.now() / 1000);
+  const result = await db.prepare(
+    'INSERT INTO event_logs (trip_id, action, description, created_at) VALUES (?, ?, ?, ?)'
+  ).bind(tripId, action, description, now).run();
+
+  return {
+    id: result.meta.last_row_id as number,
+    trip_id: tripId,
+    action,
+    description,
+    created_at: now
+  };
+}
+
+export async function getEventLogsByTrip(db: D1Database, tripId: number): Promise<EventLog[]> {
+  const result = await db.prepare(
+    'SELECT * FROM event_logs WHERE trip_id = ? ORDER BY created_at DESC'
+  ).bind(tripId).all<EventLog>();
+  return result.results || [];
 }

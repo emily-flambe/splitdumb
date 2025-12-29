@@ -1,5 +1,5 @@
 // src/frontend/app.ts
-import type { TripWithParticipants, Participant, ExpenseWithSplits, Balance, SimplifiedDebt, PaymentWithNames } from '../types';
+import type { TripWithParticipants, Participant, ExpenseWithSplits, Balance, SimplifiedDebt, PaymentWithNames, EventLog } from '../types';
 import {
   createTrip,
   authTrip,
@@ -18,6 +18,7 @@ import {
   deletePayment,
   getBalances,
   getSimplifiedDebts,
+  getEvents,
   getCredentials,
   saveCredentials,
   clearCredentials,
@@ -43,7 +44,7 @@ interface AppState {
   payments: PaymentWithNames[];
   balances: Balance[];
   simplifiedDebts: SimplifiedDebt[];
-  showSimplified: boolean;
+  events: EventLog[];
   loading: boolean;
   adminPassword: string | null;
   adminTrips: AdminTrip[];
@@ -58,7 +59,7 @@ const state: AppState = {
   payments: [],
   balances: [],
   simplifiedDebts: [],
-  showSimplified: true,
+  events: [],
   loading: false,
   adminPassword: null,
   adminTrips: [],
@@ -78,6 +79,9 @@ const tripPasswordInput = document.getElementById('trip-password') as HTMLInputE
 const backBtn = document.getElementById('back-btn') as HTMLButtonElement;
 const tripNameDisplay = document.getElementById('trip-name') as HTMLHeadingElement;
 const shareBtn = document.getElementById('share-btn') as HTMLButtonElement;
+const shareUrl = document.getElementById('share-url') as HTMLAnchorElement;
+const sharePassword = document.getElementById('share-password') as HTMLSpanElement;
+const copyFeedback = document.getElementById('copy-feedback') as HTMLSpanElement;
 const settingsBtn = document.getElementById('settings-btn') as HTMLButtonElement;
 const participantsList = document.getElementById('participants-list') as HTMLUListElement;
 const addParticipantBtn = document.getElementById('add-participant-btn') as HTMLButtonElement;
@@ -100,6 +104,7 @@ const paymentToSelect = document.getElementById('payment-to') as HTMLSelectEleme
 const paymentAmountInput = document.getElementById('payment-amount') as HTMLInputElement;
 const addPaymentBtn = document.getElementById('add-payment-btn') as HTMLButtonElement;
 const paymentsList = document.getElementById('payments-list') as HTMLDivElement;
+const eventLog = document.getElementById('event-log') as HTMLDivElement;
 
 // Modal elements
 const modalOverlay = document.getElementById('modal-overlay') as HTMLDivElement;
@@ -264,12 +269,13 @@ async function loadTripData(slug: string) {
   state.loading = true;
 
   try {
-    const [trip, balances, simplifiedDebts, expenses, payments] = await Promise.all([
+    const [trip, balances, simplifiedDebts, expenses, payments, events] = await Promise.all([
       getTrip(slug),
       getBalances(slug),
       getSimplifiedDebts(slug),
       getExpenses(slug),
       getPayments(slug),
+      getEvents(slug),
     ]);
 
     state.trip = trip;
@@ -277,10 +283,12 @@ async function loadTripData(slug: string) {
     state.simplifiedDebts = simplifiedDebts;
     state.expenses = expenses;
     state.payments = payments;
+    state.events = events;
 
     renderTripView();
     renderExpenses();
     renderPayments();
+    renderEvents();
   } catch (error) {
     if (error instanceof ApiError) {
       if (error.status === 401) {
@@ -303,6 +311,15 @@ function renderTripView() {
 
   // Update trip name
   tripNameDisplay.textContent = state.trip.name;
+
+  // Update share box with credentials
+  const credentials = getCredentials();
+  if (credentials) {
+    const fullUrl = `https://splitdumb.emilycogsdill.com/${credentials.slug}`;
+    shareUrl.textContent = fullUrl;
+    shareUrl.href = fullUrl;
+    sharePassword.textContent = credentials.password;
+  }
 
   // Render participants
   renderParticipants();
@@ -416,81 +433,33 @@ function renderBalances() {
     return;
   }
 
-  // Toggle button
-  const toggleButton = `
-    <div class="balance-toggle">
-      <button id="toggle-balance-view" class="toggle-btn">
-        ${state.showSimplified ? 'Show Detailed Balances' : 'Show Simplified Payments'}
-      </button>
-    </div>
-  `;
-
   let content = '';
 
-  if (state.showSimplified) {
-    // Show simplified debts (payment instructions)
-    if (state.simplifiedDebts.length === 0) {
-      content = '<div class="empty-state">All debts are settled!</div>';
-    } else {
-      content = `
-        <div class="simplified-debts-header">
-          <strong>Who should pay whom:</strong>
-        </div>
-        ${state.simplifiedDebts
-          .map((debt) => {
-            return `
-              <div class="balance-item simplified">
-                <span class="balance-name">${escapeHtml(debt.from_participant_name)}</span>
-                <span class="balance-status">pays</span>
-                <span class="balance-amount">$${debt.amount.toFixed(2)}</span>
-                <span class="balance-status">to</span>
-                <span class="balance-name">${escapeHtml(debt.to_participant_name)}</span>
-              </div>
-            `;
-          })
-          .join('')}
-      `;
-    }
+  // Show simplified debts (payment instructions)
+  if (state.simplifiedDebts.length === 0) {
+    content = '<div class="empty-state">All debts are settled!</div>';
   } else {
-    // Show detailed balances
-    content = state.balances
-      .map((balance) => {
-        const netAmount = Math.abs(balance.net);
-        let statusText = '';
-        let colorClass = '';
-
-        if (balance.net > 0) {
-          statusText = 'gets back';
-          colorClass = 'positive';
-        } else if (balance.net < 0) {
-          statusText = 'owes';
-          colorClass = 'negative';
-        } else {
-          statusText = 'is settled up';
-          colorClass = 'neutral';
-        }
-
-        return `
-          <div class="balance-item ${colorClass}">
-            <span class="balance-name">${escapeHtml(balance.participant_name)}</span>
-            <span class="balance-status">${statusText}</span>
-            <span class="balance-amount">$${netAmount.toFixed(2)}</span>
-          </div>
-        `;
-      })
-      .join('');
+    content = `
+      <div class="simplified-debts-header">
+        <strong>Who should pay whom:</strong>
+      </div>
+      ${state.simplifiedDebts
+        .map((debt) => {
+          return `
+            <div class="balance-item simplified">
+              <span class="balance-name">${escapeHtml(debt.from_participant_name)}</span>
+              <span class="balance-status">pays</span>
+              <span class="balance-amount">$${debt.amount.toFixed(2)}</span>
+              <span class="balance-status">to</span>
+              <span class="balance-name">${escapeHtml(debt.to_participant_name)}</span>
+            </div>
+          `;
+        })
+        .join('')}
+    `;
   }
 
-  balancesList.innerHTML = toggleButton + content;
-
-  // Add event listener for toggle button
-  const toggleBtn = document.getElementById('toggle-balance-view');
-  if (toggleBtn) {
-    toggleBtn.addEventListener('click', () => {
-      state.showSimplified = !state.showSimplified;
-      renderBalances();
-    });
-  }
+  balancesList.innerHTML = content;
 }
 
 async function handleAddParticipant() {
@@ -676,23 +645,22 @@ function handleShareTrip() {
   if (!state.currentSlug) return;
 
   const credentials = getCredentials();
-  if (!credentials) {
-    alert('Unable to share trip - credentials not found');
-    return;
-  }
+  if (!credentials) return;
 
-  const shareMessage = `Join my trip on SplitDumb!
-
+  const shareMessage = `URL:
 https://splitdumb.emilycogsdill.com/${credentials.slug}
-Password: ${credentials.password}
-
-(it's super secure don't worry)`;
+Password:
+${credentials.password}`;
 
   // Copy to clipboard
   navigator.clipboard
     .writeText(shareMessage)
     .then(() => {
-      alert('Share link copied to clipboard!');
+      // Show "Copied!" feedback
+      copyFeedback.classList.add('show');
+      setTimeout(() => {
+        copyFeedback.classList.remove('show');
+      }, 2000);
     })
     .catch(() => {
       // Fallback: show the message
@@ -1617,6 +1585,43 @@ async function handleEditExpenseSubmit(expenseId: number) {
       alert('Failed to update expense. Please try again.');
     }
   }
+}
+
+function renderEvents() {
+  if (state.events.length === 0) {
+    eventLog.innerHTML = '<div class="empty-state">No activity yet</div>';
+    return;
+  }
+
+  eventLog.innerHTML = state.events
+    .map((event) => {
+      const date = new Date(event.created_at * 1000);
+      const timeStr = formatRelativeTime(date);
+
+      return `
+        <div class="event-item">
+          <span class="event-description">${escapeHtml(event.description)}</span>
+          <span class="event-time">${timeStr}</span>
+        </div>
+      `;
+    })
+    .join('');
+}
+
+function formatRelativeTime(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffSecs / 60);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffSecs < 60) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 export {};

@@ -1,10 +1,10 @@
 // src/api/trips.ts
 import { Hono } from 'hono';
-import type { Env, CreateTripRequest, UpdateTripRequest } from '../types';
+import type { Env, Trip, CreateTripRequest, UpdateTripRequest } from '../types';
 import * as db from '../db/queries';
 import { verifyPassword } from '../lib/password';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: { trip: Trip } }>();
 
 // POST /api/trips - Create a new trip
 app.post('/', async (c) => {
@@ -103,10 +103,19 @@ app.put('/:slug', verifyTripAccess, async (c) => {
   try {
     const slug = c.req.param('slug');
     const body = await c.req.json<UpdateTripRequest>();
+    const oldTrip = c.get('trip');
 
     const trip = await db.updateTrip(c.env.DB, slug, body);
     if (!trip) {
       return c.json({ error: 'Trip not found' }, 404);
+    }
+
+    // Log events for changes
+    if (body.name && body.name !== oldTrip.name) {
+      await db.createEventLog(c.env.DB, trip.id, 'TRIP_RENAMED', `Trip renamed to "${body.name}"`);
+    }
+    if (body.password) {
+      await db.createEventLog(c.env.DB, trip.id, 'PASSWORD_CHANGED', `Trip password changed to "${body.password}"`);
     }
 
     const { password_hash, ...tripWithoutHash } = trip;

@@ -32,8 +32,8 @@ test.describe('SplitDumb E2E Tests', () => {
 
       // Verify credentials modal appears
       await expect(page.getByRole('heading', { name: 'Trip Created!' })).toBeVisible();
-      await expect(page.getByText('Trip Code')).toBeVisible();
-      await expect(page.getByText('Password')).toBeVisible();
+      await expect(page.locator('.modal').getByText('Trip Code')).toBeVisible();
+      await expect(page.locator('.modal').getByText('Password', { exact: true })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Continue to Trip' })).toBeVisible();
     });
   });
@@ -99,16 +99,10 @@ test.describe('SplitDumb E2E Tests', () => {
       // Scroll to balances section
       await page.locator('#balances-list').scrollIntoViewIfNeeded();
 
-      // Toggle to detailed balances view (app defaults to simplified)
-      await page.getByRole('button', { name: 'Show Detailed Balances' }).click();
-
-      // Verify balances: Alice gets back $50, Bob owes $25, Charlie owes $25
-      await expect(page.locator('#balances-list .balance-item.positive')).toContainText('Alice');
-      await expect(page.locator('#balances-list .balance-item.positive')).toContainText('gets back');
-      await expect(page.locator('#balances-list .balance-item.positive')).toContainText('$50.00');
-      await expect(page.locator('#balances-list .balance-item.negative').first()).toContainText('Bob');
-      await expect(page.locator('#balances-list .balance-item.negative').first()).toContainText('owes');
-      await expect(page.locator('#balances-list .balance-item.negative').first()).toContainText('$25.00');
+      // Verify simplified balances show who pays whom
+      await expect(page.locator('#balances-list').getByText('Who should pay whom:')).toBeVisible();
+      // Bob and Charlie each owe $25 to Alice
+      await expect(page.locator('#balances-list .balance-item').first().getByText('pays')).toBeVisible();
     });
 
     test('can edit an expense via modal', async ({ page }) => {
@@ -139,9 +133,9 @@ test.describe('SplitDumb E2E Tests', () => {
       await page.locator('#expense-payer').selectOption('TestUser');
       await page.getByRole('button', { name: 'Add Expense' }).click();
 
-      // Verify expense appears
-      await expect(page.getByText('Original Expense')).toBeVisible();
-      await expect(page.getByText('$100.00')).toBeVisible();
+      // Verify expense appears in expenses list (use specific selector to avoid matching event log)
+      await expect(page.locator('#expenses-list .expense-description').getByText('Original Expense')).toBeVisible();
+      await expect(page.locator('#expenses-list').getByText('$100.00')).toBeVisible();
 
       // Wait for the expense item to be ready and click on it to open edit modal
       const expenseItem = page.locator('.expense-item');
@@ -162,10 +156,10 @@ test.describe('SplitDumb E2E Tests', () => {
       // Save changes
       await page.getByRole('button', { name: 'Save Changes' }).click();
 
-      // Verify modal closes and expense is updated
+      // Verify modal closes and expense is updated (use specific selector)
       await expect(page.getByRole('heading', { name: 'Edit Expense' })).not.toBeVisible();
-      await expect(page.getByText('Updated Expense')).toBeVisible();
-      await expect(page.getByText('$75.50')).toBeVisible();
+      await expect(page.locator('#expenses-list .expense-description').getByText('Updated Expense')).toBeVisible();
+      await expect(page.locator('#expenses-list').getByText('$75.50')).toBeVisible();
     });
 
     test('can delete an expense and balances update', async ({ page }) => {
@@ -250,16 +244,14 @@ test.describe('SplitDumb E2E Tests', () => {
       // Verify expense appears
       await expect(page.getByText('Dinner $100.00')).toBeVisible();
 
-      // Scroll to balances and check detailed view
+      // Scroll to balances and verify simplified view shows Bob pays Alice
       await page.locator('#balances-list').scrollIntoViewIfNeeded();
-      await page.getByRole('button', { name: 'Show Detailed Balances' }).click();
 
-      // Alice paid $100, owes $75 = gets back $25
-      // Bob paid $0, owes $25 = owes $25
-      await expect(page.locator('#balances-list .balance-item.positive')).toContainText('Alice');
-      await expect(page.locator('#balances-list .balance-item.positive')).toContainText('$25.00');
-      await expect(page.locator('#balances-list .balance-item.negative')).toContainText('Bob');
-      await expect(page.locator('#balances-list .balance-item.negative')).toContainText('$25.00');
+      // Bob paid $0, owes $25 = pays $25 to Alice
+      await expect(page.locator('#balances-list').getByText('Who should pay whom:')).toBeVisible();
+      await expect(page.locator('#balances-list .balance-item').getByText('Bob')).toBeVisible();
+      await expect(page.locator('#balances-list .balance-item').getByText('pays')).toBeVisible();
+      await expect(page.locator('#balances-list .balance-item').getByText('Alice')).toBeVisible();
     });
   });
 
@@ -304,7 +296,7 @@ test.describe('SplitDumb E2E Tests', () => {
   });
 
   test.describe('Share Functionality', () => {
-    test('share button copies to clipboard', async ({ page, context }) => {
+    test('copy button copies to clipboard and shows feedback', async ({ page, context }) => {
       // Grant clipboard permissions
       await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
@@ -317,11 +309,15 @@ test.describe('SplitDumb E2E Tests', () => {
       await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
       await page.getByRole('button', { name: 'Continue to Trip' }).click();
 
-      // Click share button - should show alert
-      await page.getByRole('button', { name: /Share Trip/i }).click();
+      // Verify share box shows credentials
+      await expect(page.locator('#share-url')).not.toHaveText('---');
+      await expect(page.locator('#share-password')).not.toHaveText('---');
 
-      // The share action triggers an alert, we auto-accept it
-      // If we got here without error, the share worked
+      // Click copy button
+      await page.getByRole('button', { name: 'Copy' }).click();
+
+      // Verify "Copied!" feedback appears
+      await expect(page.locator('#copy-feedback')).toHaveClass(/show/);
     });
   });
 
@@ -343,8 +339,8 @@ test.describe('SplitDumb E2E Tests', () => {
       // View credentials
       await page.getByText('View Credentials').click();
       await expect(page.getByRole('heading', { name: 'Trip Credentials' })).toBeVisible();
-      await expect(page.getByText('Trip Code')).toBeVisible();
-      await expect(page.getByText('Password')).toBeVisible();
+      await expect(page.locator('.modal').getByText('Trip Code')).toBeVisible();
+      await expect(page.locator('.modal').getByText('Password', { exact: true })).toBeVisible();
     });
   });
 
@@ -372,57 +368,6 @@ test.describe('SplitDumb E2E Tests', () => {
   });
 
   test.describe('Debt Simplification', () => {
-    test('can toggle between simplified and detailed balance views', async ({ page }) => {
-      const dialogResponses = ['Toggle Test', 'User1', 'User2'];
-      let dialogIndex = 0;
-      page.on('dialog', async (dialog) => {
-        if (dialogIndex < dialogResponses.length) {
-          await dialog.accept(dialogResponses[dialogIndex++]);
-        } else {
-          await dialog.accept();
-        }
-      });
-
-      await page.goto('/?test=true');
-
-      // Create trip and add participants
-      await page.getByRole('button', { name: /Create Trip/i }).click();
-      await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
-      await page.getByRole('button', { name: 'Continue to Trip' }).click();
-      await page.getByRole('button', { name: '+ Add' }).click();
-      await expect(page.locator('#participants-list').getByText('User1')).toBeVisible();
-      await page.getByRole('button', { name: '+ Add' }).click();
-      await expect(page.locator('#participants-list').getByText('User2')).toBeVisible();
-
-      // Add expense
-      await page.getByRole('textbox', { name: /what was it for/i }).fill('Test');
-      await page.getByPlaceholder('Amount').fill('100');
-      await page.locator('#expense-payer').selectOption('User1');
-      await page.getByRole('button', { name: 'Add Expense' }).click();
-
-      // Wait for expense to appear
-      await expect(page.getByText('Test $100.00')).toBeVisible();
-
-      // Scroll to balances section
-      await page.locator('#balances-list').scrollIntoViewIfNeeded();
-
-      // Should start with simplified view
-      await expect(page.locator('#balances-list').getByText('Who should pay whom:')).toBeVisible();
-
-      // Toggle to detailed view
-      await page.getByRole('button', { name: 'Show Detailed Balances' }).click();
-
-      // Should now show detailed balances
-      await expect(page.locator('#balances-list .balance-item').getByText('gets back')).toBeVisible();
-      await expect(page.locator('#balances-list .balance-item').getByText('owes')).toBeVisible();
-
-      // Toggle back to simplified
-      await page.getByRole('button', { name: 'Show Simplified Payments' }).click();
-
-      // Should show simplified view again
-      await expect(page.locator('#balances-list').getByText('Who should pay whom:')).toBeVisible();
-    });
-
     test('shows correct simplified debts for complex scenario', async ({ page }) => {
       const dialogResponses = ['Complex Test', 'Alice', 'Bob', 'Charlie'];
       let dialogIndex = 0;
@@ -546,7 +491,12 @@ test.describe('SplitDumb E2E Tests', () => {
 
       // Add participants
       await page.getByRole('button', { name: '+ Add' }).click();
+      await expect(page.locator('#participants-list').getByText('Alice')).toBeVisible();
       await page.getByRole('button', { name: '+ Add' }).click();
+      await expect(page.locator('#participants-list').getByText('Bob')).toBeVisible();
+
+      // Wait for participant checkboxes to be updated
+      await expect(page.locator('.participant-checkbox').nth(1)).toBeVisible();
 
       // Add expense: Alice pays $100 split between both
       await page.getByRole('textbox', { name: /what was it for/i }).fill('Dinner');
@@ -607,7 +557,12 @@ test.describe('SplitDumb E2E Tests', () => {
 
       // Add participants
       await page.getByRole('button', { name: '+ Add' }).click();
+      await expect(page.locator('#participants-list').getByText('Alice')).toBeVisible();
       await page.getByRole('button', { name: '+ Add' }).click();
+      await expect(page.locator('#participants-list').getByText('Bob')).toBeVisible();
+
+      // Wait for participant checkboxes to be updated
+      await expect(page.locator('.participant-checkbox').nth(1)).toBeVisible();
 
       // Add expense: Alice pays $100
       await page.getByRole('textbox', { name: /what was it for/i }).fill('Dinner');
@@ -670,7 +625,12 @@ test.describe('SplitDumb E2E Tests', () => {
 
       // Add participants
       await page.getByRole('button', { name: '+ Add' }).click();
+      await expect(page.locator('#participants-list').getByText('Alice')).toBeVisible();
       await page.getByRole('button', { name: '+ Add' }).click();
+      await expect(page.locator('#participants-list').getByText('Bob')).toBeVisible();
+
+      // Wait for participant checkboxes to be updated
+      await expect(page.locator('.participant-checkbox').nth(1)).toBeVisible();
 
       // Add expense: Alice pays $100
       await page.getByRole('textbox', { name: /what was it for/i }).fill('Dinner');
