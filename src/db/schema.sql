@@ -47,8 +47,22 @@ CREATE TABLE IF NOT EXISTS expense_splits (
   UNIQUE(expense_id, participant_id)
 );
 
+-- Payments between participants (to settle debts)
+CREATE TABLE IF NOT EXISTS payments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  trip_id INTEGER NOT NULL,
+  from_participant_id INTEGER NOT NULL,
+  to_participant_id INTEGER NOT NULL,
+  amount REAL NOT NULL,
+  created_at INTEGER DEFAULT (unixepoch()),
+  FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE,
+  FOREIGN KEY (from_participant_id) REFERENCES participants(id),
+  FOREIGN KEY (to_participant_id) REFERENCES participants(id)
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_participants_trip ON participants(trip_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_trip ON expenses(trip_id);
 CREATE INDEX IF NOT EXISTS idx_expense_splits_expense ON expense_splits(expense_id);
 CREATE INDEX IF NOT EXISTS idx_trips_slug ON trips(slug);
+CREATE INDEX IF NOT EXISTS idx_payments_trip ON payments(trip_id);

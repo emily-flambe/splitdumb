@@ -524,4 +524,193 @@ test.describe('SplitDumb E2E Tests', () => {
       await expect(page.locator('#balances-list').getByText('All debts are settled!')).toBeVisible();
     });
   });
+
+  test.describe('Payments', () => {
+    test('can add a payment and balances update', async ({ page }) => {
+      const dialogResponses = ['Payment Test', 'Alice', 'Bob'];
+      let dialogIndex = 0;
+      page.on('dialog', async (dialog) => {
+        if (dialogIndex < dialogResponses.length) {
+          await dialog.accept(dialogResponses[dialogIndex++]);
+        } else {
+          await dialog.accept();
+        }
+      });
+
+      await page.goto('/?test=true');
+
+      // Create trip
+      await page.getByRole('button', { name: /Create Trip/i }).click();
+      await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
+      await page.getByRole('button', { name: 'Continue to Trip' }).click();
+
+      // Add participants
+      await page.getByRole('button', { name: '+ Add' }).click();
+      await page.getByRole('button', { name: '+ Add' }).click();
+
+      // Add expense: Alice pays $100 split between both
+      await page.getByRole('textbox', { name: /what was it for/i }).fill('Dinner');
+      await page.getByPlaceholder('Amount').fill('100');
+      await page.locator('#expense-payer').selectOption('Alice');
+      await page.getByRole('button', { name: 'Add Expense' }).click();
+
+      await expect(page.getByText('Dinner $100.00')).toBeVisible();
+
+      // Scroll to balances section
+      await page.locator('#balances-list').scrollIntoViewIfNeeded();
+
+      // Verify initial simplified debts: Bob owes Alice $50
+      await expect(page.locator('.balance-item.simplified')).toContainText('Bob');
+      await expect(page.locator('.balance-item.simplified')).toContainText('pays');
+      await expect(page.locator('.balance-item.simplified')).toContainText('$50.00');
+      await expect(page.locator('.balance-item.simplified')).toContainText('Alice');
+
+      // Scroll to payments section
+      await page.locator('#payments-list').scrollIntoViewIfNeeded();
+
+      // Add a payment: Bob pays Alice $20
+      await page.locator('#payment-from').selectOption('Bob');
+      await page.locator('#payment-to').selectOption('Alice');
+      await page.locator('#payment-amount').fill('20');
+      await page.locator('.btn-add-payment').click();
+
+      // Wait for payment to appear
+      await expect(page.locator('.payment-item')).toBeVisible();
+      await expect(page.locator('.payment-item')).toContainText('Bob');
+      await expect(page.locator('.payment-item')).toContainText('Alice');
+      await expect(page.locator('.payment-item')).toContainText('$20.00');
+
+      // Scroll back to balances section
+      await page.locator('#balances-list').scrollIntoViewIfNeeded();
+
+      // Verify updated simplified debts: Bob now owes Alice $30
+      await expect(page.locator('.balance-item.simplified')).toContainText('$30.00');
+    });
+
+    test('can edit a payment amount inline', async ({ page }) => {
+      const dialogResponses = ['Edit Payment Test', 'Alice', 'Bob'];
+      let dialogIndex = 0;
+      page.on('dialog', async (dialog) => {
+        if (dialogIndex < dialogResponses.length) {
+          await dialog.accept(dialogResponses[dialogIndex++]);
+        } else {
+          await dialog.accept();
+        }
+      });
+
+      await page.goto('/?test=true');
+
+      // Create trip
+      await page.getByRole('button', { name: /Create Trip/i }).click();
+      await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
+      await page.getByRole('button', { name: 'Continue to Trip' }).click();
+
+      // Add participants
+      await page.getByRole('button', { name: '+ Add' }).click();
+      await page.getByRole('button', { name: '+ Add' }).click();
+
+      // Add expense: Alice pays $100
+      await page.getByRole('textbox', { name: /what was it for/i }).fill('Dinner');
+      await page.getByPlaceholder('Amount').fill('100');
+      await page.locator('#expense-payer').selectOption('Alice');
+      await page.getByRole('button', { name: 'Add Expense' }).click();
+
+      await expect(page.getByText('Dinner $100.00')).toBeVisible();
+
+      // Scroll to payments section
+      await page.locator('#payments-list').scrollIntoViewIfNeeded();
+
+      // Add a payment: Bob pays Alice $20
+      await page.locator('#payment-from').selectOption('Bob');
+      await page.locator('#payment-to').selectOption('Alice');
+      await page.locator('#payment-amount').fill('20');
+      await page.locator('.btn-add-payment').click();
+
+      // Wait for payment to appear
+      await expect(page.locator('.payment-item .payment-amount')).toContainText('$20.00');
+
+      // Click on the amount to edit it
+      await page.locator('.payment-item .payment-amount').click();
+
+      // Wait for input to appear and change value
+      const amountInput = page.locator('.payment-item .payment-amount-input');
+      await expect(amountInput).toBeVisible();
+      await amountInput.fill('35');
+      await amountInput.press('Enter');
+
+      // Wait for updated amount to appear
+      await expect(page.locator('.payment-item .payment-amount')).toContainText('$35.00');
+
+      // Scroll to balances section
+      await page.locator('#balances-list').scrollIntoViewIfNeeded();
+
+      // Verify updated simplified debts: Bob now owes Alice $15 (50 - 35)
+      await expect(page.locator('.balance-item.simplified')).toContainText('$15.00');
+    });
+
+    test('can delete a payment and balances revert', async ({ page }) => {
+      const dialogResponses = ['Delete Payment Test', 'Alice', 'Bob'];
+      let dialogIndex = 0;
+      page.on('dialog', async (dialog) => {
+        if (dialog.type() === 'confirm') {
+          await dialog.accept();
+        } else if (dialogIndex < dialogResponses.length) {
+          await dialog.accept(dialogResponses[dialogIndex++]);
+        } else {
+          await dialog.accept();
+        }
+      });
+
+      await page.goto('/?test=true');
+
+      // Create trip
+      await page.getByRole('button', { name: /Create Trip/i }).click();
+      await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
+      await page.getByRole('button', { name: 'Continue to Trip' }).click();
+
+      // Add participants
+      await page.getByRole('button', { name: '+ Add' }).click();
+      await page.getByRole('button', { name: '+ Add' }).click();
+
+      // Add expense: Alice pays $100
+      await page.getByRole('textbox', { name: /what was it for/i }).fill('Dinner');
+      await page.getByPlaceholder('Amount').fill('100');
+      await page.locator('#expense-payer').selectOption('Alice');
+      await page.getByRole('button', { name: 'Add Expense' }).click();
+
+      await expect(page.getByText('Dinner $100.00')).toBeVisible();
+
+      // Scroll to payments section
+      await page.locator('#payments-list').scrollIntoViewIfNeeded();
+
+      // Add a payment: Bob pays Alice $20
+      await page.locator('#payment-from').selectOption('Bob');
+      await page.locator('#payment-to').selectOption('Alice');
+      await page.locator('#payment-amount').fill('20');
+      await page.locator('.btn-add-payment').click();
+
+      // Wait for payment to appear
+      await expect(page.locator('.payment-item')).toBeVisible();
+
+      // Scroll to balances section to verify $30 debt
+      await page.locator('#balances-list').scrollIntoViewIfNeeded();
+      await expect(page.locator('.balance-item.simplified')).toContainText('$30.00');
+
+      // Scroll back to payments section
+      await page.locator('#payments-list').scrollIntoViewIfNeeded();
+
+      // Delete the payment
+      await page.locator('.btn-delete-payment').click();
+
+      // Wait for payment to be removed
+      await expect(page.locator('.payment-item')).not.toBeVisible();
+      await expect(page.locator('#payments-list').getByText('No payments logged yet')).toBeVisible();
+
+      // Scroll to balances section
+      await page.locator('#balances-list').scrollIntoViewIfNeeded();
+
+      // Verify balances reverted: Bob owes Alice $50 again
+      await expect(page.locator('.balance-item.simplified')).toContainText('$50.00');
+    });
+  });
 });

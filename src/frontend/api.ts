@@ -5,8 +5,11 @@ import type {
   ExpenseWithSplits,
   Balance,
   SimplifiedDebt,
+  PaymentWithNames,
   CreateExpenseRequest,
   UpdateExpenseRequest,
+  CreatePaymentRequest,
+  UpdatePaymentRequest,
 } from '../types';
 
 // Custom error class for API errors
@@ -249,6 +252,54 @@ export async function deleteExpense(
 ): Promise<{ success: true; message: string }> {
   return apiFetch<{ success: true; message: string }>(
     `/api/trips/${slug}/expenses/${expenseId}`,
+    {
+      method: 'DELETE',
+    },
+    true
+  );
+}
+
+// Payment Operations
+
+export async function getPayments(slug: string): Promise<PaymentWithNames[]> {
+  return apiFetch<PaymentWithNames[]>(`/api/trips/${slug}/payments`, {}, true);
+}
+
+export async function createPayment(
+  slug: string,
+  payment: CreatePaymentRequest
+): Promise<PaymentWithNames> {
+  return apiFetch<PaymentWithNames>(
+    `/api/trips/${slug}/payments`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payment),
+    },
+    true
+  );
+}
+
+export async function updatePayment(
+  slug: string,
+  paymentId: number,
+  payment: UpdatePaymentRequest
+): Promise<PaymentWithNames> {
+  return apiFetch<PaymentWithNames>(
+    `/api/trips/${slug}/payments/${paymentId}`,
+    {
+      method: 'PUT',
+      body: JSON.stringify(payment),
+    },
+    true
+  );
+}
+
+export async function deletePayment(
+  slug: string,
+  paymentId: number
+): Promise<{ success: true; message: string }> {
+  return apiFetch<{ success: true; message: string }>(
+    `/api/trips/${slug}/payments/${paymentId}`,
     {
       method: 'DELETE',
     },

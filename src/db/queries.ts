@@ -4,11 +4,15 @@ import type {
   Participant,
   Expense,
   ExpenseSplit,
+  Payment,
   CreateTripRequest,
   UpdateTripRequest,
+  CreatePaymentRequest,
+  UpdatePaymentRequest,
   TripWithParticipants,
   SimplifiedDebt,
-  Balance
+  Balance,
+  PaymentWithNames
 } from '../types';
 import { hashPassword } from '../lib/password';
 import { generateSlug } from '../lib/slug';
@@ -324,21 +328,98 @@ export async function deleteExpense(db: D1Database, id: number): Promise<boolean
 }
 
 // ============================================================================
+// PAYMENTS
+// ============================================================================
+
+export async function getPaymentsByTrip(db: D1Database, tripId: number): Promise<Payment[]> {
+  const result = await db.prepare(
+    'SELECT * FROM payments WHERE trip_id = ? ORDER BY created_at DESC'
+  ).bind(tripId).all<Payment>();
+  return result.results || [];
+}
+
+export async function getPaymentById(db: D1Database, id: number): Promise<Payment | null> {
+  return db.prepare('SELECT * FROM payments WHERE id = ?').bind(id).first<Payment>();
+}
+
+export async function getPaymentsWithNames(db: D1Database, tripId: number): Promise<PaymentWithNames[]> {
+  const payments = await getPaymentsByTrip(db, tripId);
+  const result: PaymentWithNames[] = [];
+
+  for (const payment of payments) {
+    const fromParticipant = await getParticipantById(db, payment.from_participant_id);
+    const toParticipant = await getParticipantById(db, payment.to_participant_id);
+
+    result.push({
+      ...payment,
+      from_participant_name: fromParticipant?.name || 'Unknown',
+      to_participant_name: toParticipant?.name || 'Unknown'
+    });
+  }
+
+  return result;
+}
+
+export async function createPayment(
+  db: D1Database,
+  tripId: number,
+  data: CreatePaymentRequest
+): Promise<Payment> {
+  const now = Math.floor(Date.now() / 1000);
+
+  const result = await db.prepare(
+    'INSERT INTO payments (trip_id, from_participant_id, to_participant_id, amount, created_at) VALUES (?, ?, ?, ?, ?)'
+  ).bind(tripId, data.from_participant_id, data.to_participant_id, data.amount, now).run();
+
+  if (!result.success) {
+    throw new Error('Failed to create payment');
+  }
+
+  return {
+    id: result.meta.last_row_id as number,
+    trip_id: tripId,
+    from_participant_id: data.from_participant_id,
+    to_participant_id: data.to_participant_id,
+    amount: data.amount,
+    created_at: now
+  };
+}
+
+export async function updatePayment(
+  db: D1Database,
+  id: number,
+  data: UpdatePaymentRequest
+): Promise<Payment | null> {
+  const result = await db.prepare(
+    'UPDATE payments SET amount = ? WHERE id = ?'
+  ).bind(data.amount, id).run();
+
+  if (result.meta.changes === 0) return null;
+  return getPaymentById(db, id);
+}
+
+export async function deletePayment(db: D1Database, id: number): Promise<boolean> {
+  const result = await db.prepare('DELETE FROM payments WHERE id = ?').bind(id).run();
+  return result.success && (result.meta.changes || 0) > 0;
+}
+
+// ============================================================================
 // BALANCES
 // ============================================================================
 
 export async function getBalances(db: D1Database, tripId: number) {
   const participants = await getParticipantsByTrip(db, tripId);
   const expenses = await getExpensesByTrip(db, tripId);
+  const payments = await getPaymentsByTrip(db, tripId);
 
-  const balances: Record<number, { paid: number; owes: number }> = {};
+  const balances: Record<number, { paid: number; owes: number; paymentAdjustment: number }> = {};
 
   // Initialize all participants
   for (const p of participants) {
-    balances[p.id] = { paid: 0, owes: 0 };
+    balances[p.id] = { paid: 0, owes: 0, paymentAdjustment: 0 };
   }
 
-  // Calculate paid and owes
+  // Calculate paid and owes from expenses
   for (const expense of expenses) {
     // Add to payer's paid total
     if (balances[expense.paid_by]) {
@@ -357,13 +438,27 @@ export async function getBalances(db: D1Database, tripId: number) {
     }
   }
 
-  return participants.map(p => ({
-    participant_id: p.id,
-    participant_name: p.name,
-    paid: balances[p.id]?.paid || 0,
-    owes: balances[p.id]?.owes || 0,
-    net: (balances[p.id]?.paid || 0) - (balances[p.id]?.owes || 0)
-  }));
+  // Apply payment adjustments
+  // When A pays B: A's net increases (paid off debt), B's net decreases (received payment)
+  for (const payment of payments) {
+    if (balances[payment.from_participant_id]) {
+      balances[payment.from_participant_id].paymentAdjustment += payment.amount;
+    }
+    if (balances[payment.to_participant_id]) {
+      balances[payment.to_participant_id].paymentAdjustment -= payment.amount;
+    }
+  }
+
+  return participants.map(p => {
+    const balance = balances[p.id] || { paid: 0, owes: 0, paymentAdjustment: 0 };
+    return {
+      participant_id: p.id,
+      participant_name: p.name,
+      paid: balance.paid,
+      owes: balance.owes,
+      net: balance.paid - balance.owes + balance.paymentAdjustment
+    };
+  });
 }
 
 // ============================================================================
