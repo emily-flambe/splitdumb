@@ -40,7 +40,6 @@ interface AppState {
   balances: Balance[];
   simplifiedDebts: SimplifiedDebt[];
   events: EventLog[];
-  showSimplified: boolean;
   loading: boolean;
   adminPassword: string | null;
   adminTrips: AdminTrip[];
@@ -55,7 +54,6 @@ const state: AppState = {
   balances: [],
   simplifiedDebts: [],
   events: [],
-  showSimplified: true,
   loading: false,
   adminPassword: null,
   adminTrips: [],
@@ -75,7 +73,7 @@ const tripPasswordInput = document.getElementById('trip-password') as HTMLInputE
 const backBtn = document.getElementById('back-btn') as HTMLButtonElement;
 const tripNameDisplay = document.getElementById('trip-name') as HTMLHeadingElement;
 const shareBtn = document.getElementById('share-btn') as HTMLButtonElement;
-const shareCode = document.getElementById('share-code') as HTMLSpanElement;
+const shareUrl = document.getElementById('share-url') as HTMLAnchorElement;
 const sharePassword = document.getElementById('share-password') as HTMLSpanElement;
 const copyFeedback = document.getElementById('copy-feedback') as HTMLSpanElement;
 const settingsBtn = document.getElementById('settings-btn') as HTMLButtonElement;
@@ -303,7 +301,9 @@ function renderTripView() {
   // Update share box with credentials
   const credentials = getCredentials();
   if (credentials) {
-    shareCode.textContent = `splitdumb.emilycogsdill.com/${credentials.slug}`;
+    const fullUrl = `https://splitdumb.emilycogsdill.com/${credentials.slug}`;
+    shareUrl.textContent = fullUrl;
+    shareUrl.href = fullUrl;
     sharePassword.textContent = credentials.password;
   }
 
@@ -416,81 +416,33 @@ function renderBalances() {
     return;
   }
 
-  // Toggle button
-  const toggleButton = `
-    <div class="balance-toggle">
-      <button id="toggle-balance-view" class="toggle-btn">
-        ${state.showSimplified ? 'Show Detailed Balances' : 'Show Simplified Payments'}
-      </button>
-    </div>
-  `;
-
   let content = '';
 
-  if (state.showSimplified) {
-    // Show simplified debts (payment instructions)
-    if (state.simplifiedDebts.length === 0) {
-      content = '<div class="empty-state">All debts are settled!</div>';
-    } else {
-      content = `
-        <div class="simplified-debts-header">
-          <strong>Who should pay whom:</strong>
-        </div>
-        ${state.simplifiedDebts
-          .map((debt) => {
-            return `
-              <div class="balance-item simplified">
-                <span class="balance-name">${escapeHtml(debt.from_participant_name)}</span>
-                <span class="balance-status">pays</span>
-                <span class="balance-amount">$${debt.amount.toFixed(2)}</span>
-                <span class="balance-status">to</span>
-                <span class="balance-name">${escapeHtml(debt.to_participant_name)}</span>
-              </div>
-            `;
-          })
-          .join('')}
-      `;
-    }
+  // Show simplified debts (payment instructions)
+  if (state.simplifiedDebts.length === 0) {
+    content = '<div class="empty-state">All debts are settled!</div>';
   } else {
-    // Show detailed balances
-    content = state.balances
-      .map((balance) => {
-        const netAmount = Math.abs(balance.net);
-        let statusText = '';
-        let colorClass = '';
-
-        if (balance.net > 0) {
-          statusText = 'gets back';
-          colorClass = 'positive';
-        } else if (balance.net < 0) {
-          statusText = 'owes';
-          colorClass = 'negative';
-        } else {
-          statusText = 'is settled up';
-          colorClass = 'neutral';
-        }
-
-        return `
-          <div class="balance-item ${colorClass}">
-            <span class="balance-name">${escapeHtml(balance.participant_name)}</span>
-            <span class="balance-status">${statusText}</span>
-            <span class="balance-amount">$${netAmount.toFixed(2)}</span>
-          </div>
-        `;
-      })
-      .join('');
+    content = `
+      <div class="simplified-debts-header">
+        <strong>Who should pay whom:</strong>
+      </div>
+      ${state.simplifiedDebts
+        .map((debt) => {
+          return `
+            <div class="balance-item simplified">
+              <span class="balance-name">${escapeHtml(debt.from_participant_name)}</span>
+              <span class="balance-status">pays</span>
+              <span class="balance-amount">$${debt.amount.toFixed(2)}</span>
+              <span class="balance-status">to</span>
+              <span class="balance-name">${escapeHtml(debt.to_participant_name)}</span>
+            </div>
+          `;
+        })
+        .join('')}
+    `;
   }
 
-  balancesList.innerHTML = toggleButton + content;
-
-  // Add event listener for toggle button
-  const toggleBtn = document.getElementById('toggle-balance-view');
-  if (toggleBtn) {
-    toggleBtn.addEventListener('click', () => {
-      state.showSimplified = !state.showSimplified;
-      renderBalances();
-    });
-  }
+  balancesList.innerHTML = content;
 }
 
 async function handleAddParticipant() {
@@ -678,12 +630,10 @@ function handleShareTrip() {
   const credentials = getCredentials();
   if (!credentials) return;
 
-  const shareMessage = `Join my trip on SplitDumb!
-
+  const shareMessage = `URL:
 https://splitdumb.emilycogsdill.com/${credentials.slug}
-Password: ${credentials.password}
-
-(it's super secure don't worry)`;
+Password:
+${credentials.password}`;
 
   // Copy to clipboard
   navigator.clipboard

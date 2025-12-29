@@ -89,11 +89,10 @@
           <button id="settings-btn" class="icon-btn" aria-label="Settings">⚙</button>
         </div>
         <div id="share-box" class="share-box">
-          <div class="share-title">Share Trip Info</div>
           <div class="share-info">
             <div class="share-row">
               <span class="share-label">URL:</span>
-              <span id="share-code" class="share-value">---</span>
+              <a id="share-url" class="share-value share-link" href="#" target="_blank">---</a>
             </div>
             <div class="share-row">
               <span class="share-label">Password:</span>
@@ -101,7 +100,7 @@
             </div>
           </div>
           <div class="share-actions">
-            <button id="share-btn" class="btn btn-copy">Copy</button>
+            <button id="share-btn" class="btn btn-copy">Copy to Clipboard</button>
             <span id="copy-feedback" class="copy-feedback">Copied!</span>
           </div>
         </div>
@@ -204,15 +203,15 @@
           </div>
         </section>
       </div>
+      </div>
 
-      <!-- Event Log Sidebar -->
-      <aside class="event-log-sidebar">
+      <!-- Activity Log -->
+      <section class="activity-section">
         <h2>Activity</h2>
         <div id="event-log" class="event-log">
           <div class="empty-state">No activity yet</div>
         </div>
-      </aside>
-      </div>
+      </section>
     </section>
   </div>
 
