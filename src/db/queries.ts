@@ -181,10 +181,20 @@ export async function getExpenseWithSplits(db: D1Database, id: number) {
 
   const payer = await getParticipantById(db, expense.paid_by);
 
+  // Get participant names for splits
+  const splitParticipantNames: string[] = [];
+  for (const split of splits.results || []) {
+    const participant = await getParticipantById(db, split.participant_id);
+    if (participant) {
+      splitParticipantNames.push(participant.name);
+    }
+  }
+
   return {
     ...expense,
     splits: splits.results || [],
-    payer_name: payer?.name || 'Unknown'
+    payer_name: payer?.name || 'Unknown',
+    split_participant_names: splitParticipantNames
   };
 }
 
@@ -199,10 +209,20 @@ export async function getExpensesWithSplits(db: D1Database, tripId: number) {
 
     const payer = await getParticipantById(db, expense.paid_by);
 
+    // Get participant names for splits
+    const splitParticipantNames: string[] = [];
+    for (const split of splits.results || []) {
+      const participant = await getParticipantById(db, split.participant_id);
+      if (participant) {
+        splitParticipantNames.push(participant.name);
+      }
+    }
+
     result.push({
       ...expense,
       splits: splits.results || [],
-      payer_name: payer?.name || 'Unknown'
+      payer_name: payer?.name || 'Unknown',
+      split_participant_names: splitParticipantNames
     });
   }
 
@@ -212,13 +232,14 @@ export async function getExpensesWithSplits(db: D1Database, tripId: number) {
 export async function createExpense(
   db: D1Database,
   tripId: number,
-  data: { description: string; amount: number; paid_by: number; splits: { participant_id: number; amount: number }[] }
+  data: { description: string; amount: number; paid_by: number; expense_date?: number | null; splits: { participant_id: number; amount: number }[] }
 ): Promise<Expense> {
   const now = Math.floor(Date.now() / 1000);
+  const expenseDate = data.expense_date ?? null;
 
   const result = await db.prepare(
-    'INSERT INTO expenses (trip_id, description, amount, paid_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
-  ).bind(tripId, data.description, data.amount, data.paid_by, now, now).run();
+    'INSERT INTO expenses (trip_id, description, amount, paid_by, expense_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).bind(tripId, data.description, data.amount, data.paid_by, expenseDate, now, now).run();
 
   if (!result.success) {
     throw new Error('Failed to create expense');
@@ -239,6 +260,7 @@ export async function createExpense(
     description: data.description,
     amount: data.amount,
     paid_by: data.paid_by,
+    expense_date: expenseDate,
     created_at: now,
     updated_at: now
   };
@@ -247,10 +269,10 @@ export async function createExpense(
 export async function updateExpense(
   db: D1Database,
   id: number,
-  data: { description?: string; amount?: number; paid_by?: number; splits?: { participant_id: number; amount: number }[] }
+  data: { description?: string; amount?: number; paid_by?: number; expense_date?: number | null; splits?: { participant_id: number; amount: number }[] }
 ): Promise<Expense | null> {
   const updates: string[] = [];
-  const values: (string | number)[] = [];
+  const values: (string | number | null)[] = [];
 
   if (data.description !== undefined) {
     updates.push('description = ?');
@@ -265,6 +287,11 @@ export async function updateExpense(
   if (data.paid_by !== undefined) {
     updates.push('paid_by = ?');
     values.push(data.paid_by);
+  }
+
+  if (data.expense_date !== undefined) {
+    updates.push('expense_date = ?');
+    values.push(data.expense_date);
   }
 
   if (updates.length > 0) {

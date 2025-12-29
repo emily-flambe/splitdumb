@@ -94,7 +94,7 @@ test.describe('SplitDumb E2E Tests', () => {
 
       // Verify expense appears
       await expect(page.getByText('Dinner $75.00')).toBeVisible();
-      await expect(page.getByText('Paid by Alice')).toBeVisible();
+      await expect(page.getByText('Paid by: Alice')).toBeVisible();
 
       // Scroll to balances section
       await page.locator('#balances-list').scrollIntoViewIfNeeded();

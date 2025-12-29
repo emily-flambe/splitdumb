@@ -124,6 +124,7 @@
                 placeholder="Amount"
                 step="0.01"
                 min="0"
+                inputmode="decimal"
                 required
               >
             </div>
@@ -132,6 +133,11 @@
               <select id="expense-payer" required>
                 <option value="">Who paid?</option>
               </select>
+              <input
+                type="date"
+                id="expense-date"
+                placeholder="When? (optional)"
+              >
             </div>
 
             <div class="form-group">

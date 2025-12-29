@@ -23,6 +23,7 @@ export interface Expense {
   description: string;
   amount: number;
   paid_by: number;
+  expense_date: number | null;
   created_at: number;
   updated_at: number;
 }
@@ -63,6 +64,7 @@ export interface CreateExpenseRequest {
   description: string;
   amount: number;
   paid_by: number;
+  expense_date?: number | null;
   splits: { participant_id: number; amount: number }[];
 }
 
@@ -70,6 +72,7 @@ export interface UpdateExpenseRequest {
   description?: string;
   amount?: number;
   paid_by?: number;
+  expense_date?: number | null;
   splits?: { participant_id: number; amount: number }[];
 }
 
@@ -82,6 +85,7 @@ export interface TripWithParticipants extends Omit<Trip, 'password_hash'> {
 export interface ExpenseWithSplits extends Expense {
   splits: ExpenseSplit[];
   payer_name: string;
+  split_participant_names: string[];
 }
 
 export interface Balance {
