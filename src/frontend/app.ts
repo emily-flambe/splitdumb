@@ -1080,6 +1080,13 @@ function escapeHtml(text: string): string {
   return div.innerHTML;
 }
 
+// Block scientific notation in number inputs (e, E, +, -)
+function blockInvalidNumberKeys(e: KeyboardEvent) {
+  if (['e', 'E', '+', '-'].includes(e.key)) {
+    e.preventDefault();
+  }
+}
+
 // Event listeners
 createTripBtn.addEventListener('click', handleCreateTrip);
 joinForm.addEventListener('submit', handleJoinTrip);
@@ -1088,6 +1095,7 @@ shareBtn.addEventListener('click', handleShareTrip);
 settingsBtn.addEventListener('click', handleSettings);
 addParticipantBtn.addEventListener('click', handleAddParticipant);
 expenseForm.addEventListener('submit', handleAddExpense);
+expenseAmount.addEventListener('keydown', blockInvalidNumberKeys);
 
 // Modal event listeners
 modalClose.addEventListener('click', hideModal);
@@ -1303,6 +1311,10 @@ function showEditExpenseModal(expense: ExpenseWithSplits) {
     e.preventDefault();
     await handleEditExpenseSubmit(expense.id);
   });
+
+  // Block e/E/+/- in amount field
+  const editAmountInput = document.getElementById('edit-expense-amount') as HTMLInputElement;
+  editAmountInput?.addEventListener('keydown', blockInvalidNumberKeys);
 
   // Cancel button
   document.getElementById('cancel-edit-btn')?.addEventListener('click', hideModal);
