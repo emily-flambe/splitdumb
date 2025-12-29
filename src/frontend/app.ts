@@ -1248,7 +1248,7 @@ function showEditExpenseModal(expense: ExpenseWithSplits) {
     <form id="edit-expense-form" class="expense-form">
       <div class="form-row">
         <input type="text" id="edit-expense-description" value="${escapeHtml(expense.description)}" placeholder="What was it for?" required>
-        <input type="number" id="edit-expense-amount" value="${expense.amount.toFixed(2)}" placeholder="Amount" step="0.01" min="0" required>
+        <input type="number" id="edit-expense-amount" value="${expense.amount.toFixed(2)}" placeholder="Amount" step="0.01" min="0" inputmode="decimal" required>
       </div>
       <div class="form-row">
         <select id="edit-expense-payer" required>
