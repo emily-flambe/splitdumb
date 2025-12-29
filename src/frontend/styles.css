@@ -360,6 +360,7 @@ select:focus {
 /* Trip Layout with Sidebar */
 .trip-layout {
   display: flex;
+  align-items: flex-start;
   gap: var(--space-xl);
   max-width: 1200px;
   margin: 0 auto;
@@ -1065,11 +1066,6 @@ select:focus {
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
   height: fit-content;
-  position: sticky;
-  top: 120px;
-  max-height: calc(100vh - 160px);
-  display: flex;
-  flex-direction: column;
 }
 
 .event-log-sidebar h2 {
@@ -1114,7 +1110,6 @@ select:focus {
 
   .event-log-sidebar {
     width: 100%;
-    position: static;
     max-height: 300px;
     order: -1;
   }
