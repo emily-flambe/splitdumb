@@ -212,6 +212,7 @@ body {
 input[type="text"],
 input[type="password"],
 input[type="number"],
+input[type="date"],
 select {
   width: 100%;
   padding: 0.875rem var(--space-md);
@@ -222,6 +223,24 @@ select {
   font-family: var(--font-sans);
   font-size: 1rem;
   transition: all var(--transition-base);
+}
+
+/* Date input specific styling for dark theme */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+input[type="date"]::-webkit-datetime-edit {
+  color: var(--text-primary);
+}
+
+input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  color: var(--text-primary);
+}
+
+input[type="date"]:not(:valid)::-webkit-datetime-edit {
+  color: var(--text-muted);
 }
 
 input::placeholder {
@@ -589,6 +608,19 @@ select:focus {
 .expense-meta {
   font-size: 0.875rem;
   color: var(--text-secondary);
+}
+
+.expense-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+.expense-detail-row {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
 }
 
 .expense-amount {
