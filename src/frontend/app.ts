@@ -79,6 +79,7 @@ const expenseForm = document.getElementById('expense-form') as HTMLFormElement;
 const expenseDescription = document.getElementById('expense-description') as HTMLInputElement;
 const expenseAmount = document.getElementById('expense-amount') as HTMLInputElement;
 const expensePayer = document.getElementById('expense-payer') as HTMLSelectElement;
+const expenseDateInput = document.getElementById('expense-date') as HTMLInputElement;
 const participantCheckboxes = document.getElementById('participant-checkboxes') as HTMLDivElement;
 const customSplitsToggle = document.getElementById('custom-splits-toggle') as HTMLInputElement;
 const customSplitsSection = document.getElementById('custom-splits') as HTMLDivElement;
@@ -603,11 +604,16 @@ async function handleAddExpense(event: Event) {
     }));
   }
 
+  // Get expense date if provided
+  const expenseDateValue = expenseDateInput.value;
+  const expenseDate = expenseDateValue ? Math.floor(new Date(expenseDateValue).getTime() / 1000) : null;
+
   try {
     await createExpense(state.currentSlug, {
       description,
       amount,
       paid_by: paidBy,
+      expense_date: expenseDate,
       splits,
     });
 
@@ -1131,6 +1137,14 @@ function checkAutoLogin() {
 // Initialize app
 checkAutoLogin();
 
+function formatDate(timestamp: number): string {
+  const date = new Date(timestamp * 1000);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 function renderExpenses() {
   if (state.expenses.length === 0) {
     expensesList.innerHTML = '<li class="empty-state">No expenses yet. Add one above!</li>';
@@ -1139,11 +1153,9 @@ function renderExpenses() {
 
   expensesList.innerHTML = state.expenses
     .map((expense) => {
-      const date = new Date(expense.created_at * 1000);
-      const dateStr = date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-      });
+      const addedDateStr = formatDate(expense.created_at);
+      const expenseDateStr = expense.expense_date ? formatDate(expense.expense_date) : null;
+      const splitNames = expense.split_participant_names?.join(', ') || 'everyone';
 
       return `
         <li class="expense-item" data-expense-id="${expense.id}">
@@ -1152,9 +1164,11 @@ function renderExpenses() {
               <span class="expense-description">${escapeHtml(expense.description)}</span>
               <span class="expense-amount">$${expense.amount.toFixed(2)}</span>
             </div>
-            <div class="expense-meta">
-              <span class="expense-payer">Paid by ${escapeHtml(expense.payer_name)}</span>
-              <span class="expense-date">${dateStr}</span>
+            <div class="expense-details">
+              <div class="expense-detail-row">Added: ${addedDateStr}</div>
+              ${expenseDateStr ? `<div class="expense-detail-row">Expense date: ${expenseDateStr}</div>` : ''}
+              <div class="expense-detail-row">Paid by: ${escapeHtml(expense.payer_name)}</div>
+              <div class="expense-detail-row">Split between: ${escapeHtml(splitNames)}</div>
             </div>
           </div>
           <button class="btn-delete" data-expense-id="${expense.id}" aria-label="Delete expense">×</button>
@@ -1223,6 +1237,11 @@ function showEditExpenseModal(expense: ExpenseWithSplits) {
 
   const hasCustomSplits = !areEqualSplits(expense);
 
+  // Format expense_date for date input (YYYY-MM-DD)
+  const expenseDateValue = expense.expense_date
+    ? new Date(expense.expense_date * 1000).toISOString().split('T')[0]
+    : '';
+
   showModal(
     'Edit Expense',
     `
@@ -1235,6 +1254,7 @@ function showEditExpenseModal(expense: ExpenseWithSplits) {
         <select id="edit-expense-payer" required>
           ${participantOptions}
         </select>
+        <input type="date" id="edit-expense-date" value="${expenseDateValue}" placeholder="When? (optional)">
       </div>
       <div class="form-group">
         <label class="checkbox-label">
@@ -1355,11 +1375,16 @@ async function handleEditExpenseSubmit(expenseId: number) {
     }));
   }
 
+  // Get expense date if provided
+  const editExpenseDateValue = (document.getElementById('edit-expense-date') as HTMLInputElement).value;
+  const expenseDate = editExpenseDateValue ? Math.floor(new Date(editExpenseDateValue).getTime() / 1000) : null;
+
   try {
     await updateExpense(state.currentSlug, expenseId, {
       description,
       amount,
       paid_by: paidBy,
+      expense_date: expenseDate,
       splits,
     });
 

@@ -591,6 +591,19 @@ select:focus {
   color: var(--text-secondary);
 }
 
+.expense-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+.expense-detail-row {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
 .expense-amount {
   font-size: 1.5rem;
   font-weight: 700;

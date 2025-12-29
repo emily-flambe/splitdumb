@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS expenses (
   description TEXT NOT NULL,
   amount REAL NOT NULL,
   paid_by INTEGER NOT NULL,
+  expense_date INTEGER,
   created_at INTEGER DEFAULT (unixepoch()),
   updated_at INTEGER DEFAULT (unixepoch()),
   FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE,
