@@ -5,6 +5,7 @@ import type {
   ExpenseWithSplits,
   Balance,
   SimplifiedDebt,
+  EventLog,
   CreateExpenseRequest,
   UpdateExpenseRequest,
 } from '../types';
@@ -264,4 +265,10 @@ export async function getBalances(slug: string): Promise<Balance[]> {
 
 export async function getSimplifiedDebts(slug: string): Promise<SimplifiedDebt[]> {
   return apiFetch<SimplifiedDebt[]>(`/api/trips/${slug}/balances/simplified`, {}, true);
+}
+
+// Event Log Operations
+
+export async function getEvents(slug: string): Promise<EventLog[]> {
+  return apiFetch<EventLog[]>(`/api/trips/${slug}/events`, {}, true);
 }

@@ -35,6 +35,14 @@ export interface ExpenseSplit {
   amount: number;
 }
 
+export interface EventLog {
+  id: number;
+  trip_id: number;
+  action: string;
+  description: string;
+  created_at: number;
+}
+
 // API request types
 
 export interface CreateTripRequest {
