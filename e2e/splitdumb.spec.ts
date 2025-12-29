@@ -469,4 +469,143 @@ test.describe('SplitDumb E2E Tests', () => {
       await expect(page.locator('#balances-list').getByText('All debts are settled!')).toBeVisible();
     });
   });
+
+  test.describe('Activity Log', () => {
+    test('shows empty state initially', async ({ page }) => {
+      const dialogResponses = ['Activity Test'];
+      let dialogIndex = 0;
+      page.on('dialog', async (dialog) => {
+        if (dialogIndex < dialogResponses.length) {
+          await dialog.accept(dialogResponses[dialogIndex++]);
+        } else {
+          await dialog.accept();
+        }
+      });
+
+      await page.goto('/?test=true');
+      await page.getByRole('button', { name: /Create Trip/i }).click();
+      await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
+      await page.getByRole('button', { name: 'Continue to Trip' }).click();
+
+      // Scroll to activity section
+      await page.locator('#event-log').scrollIntoViewIfNeeded();
+
+      // Should show empty state
+      await expect(page.locator('#event-log').getByText('No activity yet')).toBeVisible();
+    });
+
+    test('logs participant added event', async ({ page }) => {
+      const dialogResponses = ['Activity Test', 'Alice'];
+      let dialogIndex = 0;
+      page.on('dialog', async (dialog) => {
+        if (dialogIndex < dialogResponses.length) {
+          await dialog.accept(dialogResponses[dialogIndex++]);
+        } else {
+          await dialog.accept();
+        }
+      });
+
+      await page.goto('/?test=true');
+      await page.getByRole('button', { name: /Create Trip/i }).click();
+      await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
+      await page.getByRole('button', { name: 'Continue to Trip' }).click();
+
+      // Add a participant
+      await page.getByRole('button', { name: '+ Add' }).click();
+      await expect(page.locator('#participants-list').getByText('Alice')).toBeVisible();
+
+      // Scroll to activity section
+      await page.locator('#event-log').scrollIntoViewIfNeeded();
+
+      // Should show participant added event
+      await expect(page.locator('#event-log').getByText('Alice was added to trip')).toBeVisible();
+    });
+
+    test('logs expense added event', async ({ page }) => {
+      const dialogResponses = ['Activity Test', 'Alice'];
+      let dialogIndex = 0;
+      page.on('dialog', async (dialog) => {
+        if (dialogIndex < dialogResponses.length) {
+          await dialog.accept(dialogResponses[dialogIndex++]);
+        } else {
+          await dialog.accept();
+        }
+      });
+
+      await page.goto('/?test=true');
+      await page.getByRole('button', { name: /Create Trip/i }).click();
+      await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
+      await page.getByRole('button', { name: 'Continue to Trip' }).click();
+
+      // Add a participant
+      await page.getByRole('button', { name: '+ Add' }).click();
+      await expect(page.locator('#participants-list').getByText('Alice')).toBeVisible();
+
+      // Add an expense
+      await page.getByRole('textbox', { name: /what was it for/i }).fill('Lunch');
+      await page.getByPlaceholder('Amount').fill('25');
+      await page.locator('#expense-payer').selectOption('Alice');
+      await page.getByRole('button', { name: 'Add Expense' }).click();
+
+      // Wait for expense to appear
+      await expect(page.getByText('Lunch $25.00')).toBeVisible();
+
+      // Scroll to activity section
+      await page.locator('#event-log').scrollIntoViewIfNeeded();
+
+      // Should show expense added event
+      await expect(page.locator('#event-log').getByText('"Lunch" ($25.00) was added')).toBeVisible();
+    });
+
+    test('logs expense modified and deleted events', async ({ page }) => {
+      const dialogResponses = ['Activity Test', 'Alice'];
+      let dialogIndex = 0;
+      page.on('dialog', async (dialog) => {
+        if (dialog.type() === 'confirm') {
+          await dialog.accept();
+        } else if (dialogIndex < dialogResponses.length) {
+          await dialog.accept(dialogResponses[dialogIndex++]);
+        } else {
+          await dialog.accept();
+        }
+      });
+
+      await page.goto('/?test=true');
+      await page.getByRole('button', { name: /Create Trip/i }).click();
+      await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
+      await page.getByRole('button', { name: 'Continue to Trip' }).click();
+
+      // Add a participant
+      await page.getByRole('button', { name: '+ Add' }).click();
+      await expect(page.locator('#participants-list').getByText('Alice')).toBeVisible();
+
+      // Add an expense
+      await page.getByRole('textbox', { name: /what was it for/i }).fill('Dinner');
+      await page.getByPlaceholder('Amount').fill('50');
+      await page.locator('#expense-payer').selectOption('Alice');
+      await page.getByRole('button', { name: 'Add Expense' }).click();
+      await expect(page.getByText('Dinner $50.00')).toBeVisible();
+
+      // Click on expense to edit
+      await page.locator('#expenses-list .expense-item').first().click();
+      await expect(page.locator('.modal')).toBeVisible();
+
+      // Edit the expense
+      await page.locator('#edit-expense-description').fill('Updated Dinner');
+      await page.locator('.modal').getByRole('button', { name: 'Save Changes' }).click();
+      await expect(page.locator('.modal')).not.toBeVisible();
+
+      // Scroll to activity section
+      await page.locator('#event-log').scrollIntoViewIfNeeded();
+
+      // Should show expense modified event
+      await expect(page.locator('#event-log').getByText('"Updated Dinner" was modified')).toBeVisible();
+
+      // Now delete the expense using the delete button on the expense item
+      await page.getByLabel('Delete expense').click();
+
+      // Should show expense deleted event
+      await expect(page.locator('#event-log').getByText('"Updated Dinner" was deleted')).toBeVisible();
+    });
+  });
 });
