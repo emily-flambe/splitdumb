@@ -303,7 +303,7 @@ function renderTripView() {
   // Update share box with credentials
   const credentials = getCredentials();
   if (credentials) {
-    shareCode.textContent = credentials.slug;
+    shareCode.textContent = `splitdumb.emilycogsdill.com/${credentials.slug}`;
     sharePassword.textContent = credentials.password;
   }
 
