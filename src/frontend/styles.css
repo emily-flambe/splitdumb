@@ -548,6 +548,22 @@ select:focus {
   margin-bottom: var(--space-sm);
 }
 
+.error-message {
+  color: var(--danger);
+  font-size: 0.875rem;
+  margin-top: var(--space-sm);
+}
+
+.password-entry-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.password-entry-form input {
+  width: 100%;
+}
+
 .checkbox-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
