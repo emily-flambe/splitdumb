@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy - SplitDumb</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💸</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Crimson+Pro:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+  <style>
+    .legal-page {
+      min-height: 100vh;
+      padding: var(--space-xl);
+    }
+
+    .legal-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .legal-header {
+      text-align: center;
+      margin-bottom: var(--space-2xl);
+    }
+
+    .legal-header .logo {
+      font-size: 2rem;
+      margin-bottom: var(--space-md);
+    }
+
+    .legal-header .logo a {
+      text-decoration: none;
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-teal) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .legal-header .logo a span {
+      -webkit-text-fill-color: var(--accent-purple);
+    }
+
+    .legal-title {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 700;
+      margin-bottom: var(--space-sm);
+      color: var(--text-primary);
+    }
+
+    .legal-updated {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+
+    .legal-content {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-2xl);
+    }
+
+    .legal-content h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--accent-teal);
+      margin-top: var(--space-2xl);
+      margin-bottom: var(--space-md);
+      padding-bottom: var(--space-sm);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .legal-content h2:first-child {
+      margin-top: 0;
+    }
+
+    .legal-content h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-top: var(--space-lg);
+      margin-bottom: var(--space-sm);
+    }
+
+    .legal-content p {
+      color: var(--text-secondary);
+      line-height: 1.8;
+      margin-bottom: var(--space-md);
+    }
+
+    .legal-content ul {
+      color: var(--text-secondary);
+      line-height: 1.8;
+      margin-bottom: var(--space-md);
+      padding-left: var(--space-xl);
+    }
+
+    .legal-content li {
+      margin-bottom: var(--space-sm);
+    }
+
+    .legal-content a {
+      color: var(--accent-teal);
+      text-decoration: none;
+    }
+
+    .legal-content a:hover {
+      text-decoration: underline;
+    }
+
+    .legal-footer {
+      text-align: center;
+      margin-top: var(--space-2xl);
+    }
+
+    .legal-footer a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.875rem;
+    }
+
+    .legal-footer a:hover {
+      color: var(--accent-teal);
+    }
+
+    .highlight-box {
+      background: var(--bg-elevated);
+      border-left: 3px solid var(--accent-teal);
+      padding: var(--space-md) var(--space-lg);
+      margin: var(--space-lg) 0;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+
+    .highlight-box p {
+      margin: 0;
+      color: var(--text-primary);
+    }
+  </style>
+</head>
+<body>
+  <div class="legal-page">
+    <div class="legal-container">
+      <header class="legal-header">
+        <div class="logo"><a href="/">Split<span>Dumb</span></a></div>
+        <h1 class="legal-title">Privacy Policy</h1>
+        <p class="legal-updated">Last updated: December 30, 2024</p>
+      </header>
+
+      <div class="legal-content">
+        <h2>Overview</h2>
+        <p>SplitDumb is designed with privacy in mind. We collect minimal data and give you full control over your information. This policy explains what data we collect, how we use it, and your rights.</p>
+
+        <div class="highlight-box">
+          <p>SplitDumb is an anonymous expense-splitting tool. You can create and use trips without creating an account or providing any personal information.</p>
+        </div>
+
+        <h2>Information We Collect</h2>
+
+        <h3>Trip Data (Required)</h3>
+        <p>When you create a trip, we store:</p>
+        <ul>
+          <li>Trip name and unique identifier (slug)</li>
+          <li>Trip password (hashed for security)</li>
+          <li>Participant names you provide</li>
+          <li>Expense descriptions, amounts, and split information</li>
+          <li>Payment records between participants</li>
+          <li>Timestamps for activity logging</li>
+        </ul>
+
+        <h3>Email Address (Optional)</h3>
+        <p>You may optionally provide an email address for trip recovery via magic link. If you choose to do so:</p>
+        <ul>
+          <li>We store your email address associated with the trip</li>
+          <li>We use it solely to send you access links when requested</li>
+          <li>We never share your email with third parties</li>
+          <li>You can remove your email at any time from trip settings</li>
+        </ul>
+
+        <h3>What We Do Not Collect</h3>
+        <ul>
+          <li>We do not require account registration</li>
+          <li>We do not use cookies for tracking</li>
+          <li>We do not collect device identifiers</li>
+          <li>We do not use analytics or tracking services</li>
+          <li>We do not display advertisements</li>
+        </ul>
+
+        <h2>How We Store Your Data</h2>
+        <p>All data is stored on Cloudflare D1, a SQLite-based database service. Your data is:</p>
+        <ul>
+          <li>Encrypted in transit using HTTPS</li>
+          <li>Stored in Cloudflare's secure data centers</li>
+          <li>Accessible only through your trip's unique URL and password</li>
+        </ul>
+
+        <h2>Data Retention</h2>
+        <p>Trip data persists until you manually delete it. There is no automatic expiration. You maintain full control over when your data is removed.</p>
+
+        <h2>Your Rights</h2>
+        <p>You have the right to:</p>
+        <ul>
+          <li><strong>Access:</strong> View all data associated with your trip at any time</li>
+          <li><strong>Export:</strong> Download your trip data (feature in development)</li>
+          <li><strong>Delete:</strong> Permanently delete your trip and all associated data</li>
+          <li><strong>Portability:</strong> Request your data in a machine-readable format</li>
+        </ul>
+
+        <h2>International Users (GDPR/CCPA)</h2>
+        <p>For users in the European Union, United Kingdom, or California:</p>
+        <ul>
+          <li>We process data based on your consent when you create a trip</li>
+          <li>You may request deletion of all your data at any time</li>
+          <li>We do not sell personal information to third parties</li>
+          <li>We do not share data with third parties for marketing purposes</li>
+        </ul>
+        <p>Cloudflare, our infrastructure provider, maintains data processing agreements and complies with international data transfer requirements.</p>
+
+        <h2>Security</h2>
+        <p>We implement reasonable security measures including:</p>
+        <ul>
+          <li>Password hashing using industry-standard algorithms</li>
+          <li>HTTPS encryption for all data in transit</li>
+          <li>Secure session management</li>
+          <li>Rate limiting to prevent abuse</li>
+        </ul>
+
+        <h2>Children's Privacy</h2>
+        <p>SplitDumb is not directed at children under 13. We do not knowingly collect information from children. If you believe a child has provided us with personal information, please contact us.</p>
+
+        <h2>Changes to This Policy</h2>
+        <p>We may update this privacy policy from time to time. Changes will be posted on this page with an updated revision date. Continued use of SplitDumb after changes constitutes acceptance of the updated policy.</p>
+
+        <h2>Contact</h2>
+        <p>For privacy-related questions or requests, contact us at:</p>
+        <p><a href="mailto:email@emilycogsdill.com">email@emilycogsdill.com</a></p>
+      </div>
+
+      <footer class="legal-footer">
+        <a href="/">Back to SplitDumb</a>
+        <span style="margin: 0 var(--space-md); color: var(--text-muted);">|</span>
+        <a href="/tos">Terms of Service</a>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>
