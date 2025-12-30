@@ -180,26 +180,9 @@ async function showTripView(slug: string) {
   const credentials = getCredentials();
 
   if (!credentials || credentials.slug !== slug) {
-    // No credentials or wrong trip - prompt for password
-    const password = prompt(`Enter password for trip "${slug}":`);
-    if (!password) {
-      // User cancelled - redirect to landing
-      navigateTo('/');
-      return;
-    }
-
-    // Try to authenticate
-    try {
-      await authTrip(slug, password);
-    } catch (error) {
-      if (error instanceof ApiError) {
-        alert(`Failed to join trip: ${error.message}`);
-      } else {
-        alert('Failed to join trip. Please try again.');
-      }
-      navigateTo('/');
-      return;
-    }
+    // No credentials or wrong trip - show password modal
+    showPasswordEntryModal(slug);
+    return;
   }
 
   state.currentView = 'trip';
@@ -274,8 +257,8 @@ async function loadTripData(slug: string) {
       getBalances(slug),
       getSimplifiedDebts(slug),
       getExpenses(slug),
-      getPayments(slug),
-      getEvents(slug),
+      getPayments(slug).catch(() => []), // Payments are optional - don't fail if table doesn't exist
+      getEvents(slug).catch(() => []), // Events are optional - don't fail if table doesn't exist
     ]);
 
     state.trip = trip;
@@ -878,6 +861,87 @@ function showModal(title: string, content: string) {
 
 function hideModal() {
   modalOverlay.style.display = 'none';
+}
+
+function showPasswordEntryModal(slug: string) {
+  showModal(
+    'Enter Password',
+    `
+    <p>Enter the password for trip "<strong>${escapeHtml(slug)}</strong>":</p>
+    <form id="password-entry-form" class="password-entry-form">
+      <input
+        type="password"
+        id="password-entry-input"
+        placeholder="Password"
+        required
+        autofocus
+      >
+      <div id="password-error" class="error-message" style="display: none;"></div>
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-primary">Join Trip</button>
+        <button type="button" id="password-cancel-btn" class="btn btn-secondary">Cancel</button>
+      </div>
+    </form>
+  `
+  );
+
+  const form = document.getElementById('password-entry-form') as HTMLFormElement;
+  const input = document.getElementById('password-entry-input') as HTMLInputElement;
+  const errorDiv = document.getElementById('password-error') as HTMLDivElement;
+  const cancelBtn = document.getElementById('password-cancel-btn') as HTMLButtonElement;
+
+  // Focus the input
+  input.focus();
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const password = input.value.trim();
+    if (!password) return;
+
+    try {
+      await authTrip(slug, password);
+      hideModal();
+      // Now show the trip view
+      state.currentView = 'trip';
+      state.currentSlug = slug;
+      landingView.classList.remove('active');
+      tripView.classList.add('active');
+      adminView.classList.remove('active');
+      loadTripData(slug);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        errorDiv.textContent = error.message;
+      } else {
+        errorDiv.textContent = 'Failed to join trip. Please try again.';
+      }
+      errorDiv.style.display = 'block';
+      input.value = '';
+      input.focus();
+    }
+  });
+
+  cancelBtn.addEventListener('click', () => {
+    hideModal();
+    navigateTo('/');
+  });
+
+  // Override modal close to navigate home
+  const closeHandler = () => {
+    hideModal();
+    navigateTo('/');
+  };
+  modalClose.removeEventListener('click', hideModal);
+  modalClose.addEventListener('click', closeHandler);
+
+  // Reset close handler when modal is hidden
+  const observer = new MutationObserver(() => {
+    if (modalOverlay.style.display === 'none') {
+      modalClose.removeEventListener('click', closeHandler);
+      modalClose.addEventListener('click', hideModal);
+      observer.disconnect();
+    }
+  });
+  observer.observe(modalOverlay, { attributes: true, attributeFilter: ['style'] });
 }
 
 function showCredentialsModal(slug: string, password: string, isNewTrip = false) {

@@ -345,24 +345,20 @@ test.describe('SplitDumb E2E Tests', () => {
   });
 
   test.describe('Password Protection', () => {
-    test('direct URL access prompts for password', async ({ page }) => {
+    test('direct URL access shows password modal', async ({ page }) => {
       // Navigate directly to a trip URL without credentials
-      // Should prompt for password and redirect to landing on cancel
-
-      let dialogSeen = false;
-      page.on('dialog', async (dialog) => {
-        dialogSeen = true;
-        expect(dialog.type()).toBe('prompt');
-        expect(dialog.message()).toContain('password');
-        await dialog.dismiss(); // Cancel the dialog
-      });
+      // Should show password modal and redirect to landing on cancel
 
       await page.goto('/some-fake-trip');
 
-      // Should have shown the password prompt
-      expect(dialogSeen).toBe(true);
+      // Should show the password entry modal
+      await expect(page.getByRole('heading', { name: 'Enter Password' })).toBeVisible();
+      await expect(page.locator('#password-entry-input')).toBeVisible();
+      await expect(page.locator('.modal').getByRole('button', { name: 'Join Trip' })).toBeVisible();
+      await expect(page.locator('.modal').getByRole('button', { name: 'Cancel' })).toBeVisible();
 
-      // Should redirect to landing page after cancelling
+      // Cancel should redirect to landing
+      await page.locator('.modal').getByRole('button', { name: 'Cancel' }).click();
       await expect(page).toHaveURL('/');
     });
   });
