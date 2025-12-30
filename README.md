@@ -2,6 +2,15 @@
 
 Simple expense splitter for friend trips. Create a trip, add participants, log expenses, and see who owes what.
 
+## Install the Android App
+
+1. Download the latest APK from [GitHub Releases](https://github.com/emily-flambe/splitdumb/releases/latest)
+2. On your Android device, enable "Install from unknown sources" in Settings > Security (or when prompted)
+3. Open the downloaded APK file to install
+4. Launch SplitDumb from your app drawer
+
+You can also use the web app at [splitdumb.emilycogsdill.com](https://splitdumb.emilycogsdill.com)
+
 ## Tech Stack
 
 - **Backend**: Hono on Cloudflare Workers
