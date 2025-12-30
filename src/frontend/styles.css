@@ -297,6 +297,15 @@ select:focus {
   color: var(--accent-teal);
 }
 
+.btn-danger {
+  background: var(--danger);
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #c0392b;
+}
+
 .btn-small {
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
