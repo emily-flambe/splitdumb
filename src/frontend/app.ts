@@ -1,5 +1,5 @@
 // src/frontend/app.ts
-import type { TripWithParticipants, Participant, ExpenseWithSplits, Balance, SimplifiedDebt, EventLog } from '../types';
+import type { TripWithParticipants, Participant, ExpenseWithSplits, Balance, SimplifiedDebt, PaymentWithNames, EventLog } from '../types';
 import {
   createTrip,
   authTrip,
@@ -12,6 +12,10 @@ import {
   updateExpense,
   deleteExpense,
   getExpenses,
+  getPayments,
+  createPayment,
+  updatePayment,
+  deletePayment,
   getBalances,
   getSimplifiedDebts,
   getEvents,
@@ -37,6 +41,7 @@ interface AppState {
   currentSlug: string | null;
   trip: TripWithParticipants | null;
   expenses: ExpenseWithSplits[];
+  payments: PaymentWithNames[];
   balances: Balance[];
   simplifiedDebts: SimplifiedDebt[];
   events: EventLog[];
@@ -51,6 +56,7 @@ const state: AppState = {
   currentSlug: null,
   trip: null,
   expenses: [],
+  payments: [],
   balances: [],
   simplifiedDebts: [],
   events: [],
@@ -93,6 +99,11 @@ const splitModePercentage = document.getElementById('split-mode-percentage') as 
 const customSplitsHelper = document.getElementById('custom-splits-helper') as HTMLParagraphElement;
 const expensesList = document.getElementById('expenses-list') as HTMLUListElement;
 const balancesList = document.getElementById('balances-list') as HTMLDivElement;
+const paymentFromSelect = document.getElementById('payment-from') as HTMLSelectElement;
+const paymentToSelect = document.getElementById('payment-to') as HTMLSelectElement;
+const paymentAmountInput = document.getElementById('payment-amount') as HTMLInputElement;
+const addPaymentBtn = document.getElementById('add-payment-btn') as HTMLButtonElement;
+const paymentsList = document.getElementById('payments-list') as HTMLDivElement;
 const eventLog = document.getElementById('event-log') as HTMLDivElement;
 
 // Modal elements
@@ -258,11 +269,12 @@ async function loadTripData(slug: string) {
   state.loading = true;
 
   try {
-    const [trip, balances, simplifiedDebts, expenses, events] = await Promise.all([
+    const [trip, balances, simplifiedDebts, expenses, payments, events] = await Promise.all([
       getTrip(slug),
       getBalances(slug),
       getSimplifiedDebts(slug),
       getExpenses(slug),
+      getPayments(slug),
       getEvents(slug),
     ]);
 
@@ -270,10 +282,12 @@ async function loadTripData(slug: string) {
     state.balances = balances;
     state.simplifiedDebts = simplifiedDebts;
     state.expenses = expenses;
+    state.payments = payments;
     state.events = events;
 
     renderTripView();
     renderExpenses();
+    renderPayments();
     renderEvents();
   } catch (error) {
     if (error instanceof ApiError) {
@@ -312,6 +326,9 @@ function renderTripView() {
 
   // Render expense form
   renderExpenseForm();
+
+  // Render payment form
+  renderPaymentForm();
 
   // Render balances
   renderBalances();
@@ -1041,6 +1058,190 @@ async function handleDeleteTripSetting() {
   }
 }
 
+// Payment functions
+function renderPaymentForm() {
+  if (!state.trip) return;
+
+  const participants = state.trip.participants;
+
+  // Update payment from/to selects
+  const options = participants.map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+
+  paymentFromSelect.innerHTML = '<option value="">From</option>' + options;
+  paymentToSelect.innerHTML = '<option value="">To</option>' + options;
+
+  // Reset form
+  paymentAmountInput.value = '';
+  addPaymentBtn.disabled = true;
+}
+
+function validatePaymentForm() {
+  const fromId = paymentFromSelect.value;
+  const toId = paymentToSelect.value;
+  const amount = parseFloat(paymentAmountInput.value);
+
+  addPaymentBtn.disabled = !fromId || !toId || fromId === toId || !amount || amount <= 0;
+}
+
+function renderPayments() {
+  if (state.payments.length === 0) {
+    paymentsList.innerHTML = '<div class="empty-state">No payments logged yet</div>';
+    return;
+  }
+
+  paymentsList.innerHTML = state.payments
+    .map(
+      (payment) => `
+      <div class="payment-item" data-payment-id="${payment.id}">
+        <span class="payment-from">${escapeHtml(payment.from_participant_name)}</span>
+        <span class="payment-arrow">→</span>
+        <span class="payment-to">${escapeHtml(payment.to_participant_name)}</span>
+        <span class="payment-amount" data-payment-id="${payment.id}">$${payment.amount.toFixed(2)}</span>
+        <button class="btn-delete-payment" data-payment-id="${payment.id}" aria-label="Delete payment">×</button>
+      </div>
+    `
+    )
+    .join('');
+
+  // Add click-to-edit handlers for payment amounts
+  paymentsList.querySelectorAll('.payment-amount').forEach((amountEl) => {
+    amountEl.addEventListener('click', (e) => {
+      const paymentId = parseInt((e.target as HTMLElement).dataset.paymentId || '0');
+      const payment = state.payments.find((p) => p.id === paymentId);
+      if (payment) {
+        startEditPaymentAmount(e.target as HTMLElement, payment);
+      }
+    });
+  });
+
+  // Add delete handlers
+  paymentsList.querySelectorAll('.btn-delete-payment').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      const paymentId = parseInt((e.target as HTMLElement).dataset.paymentId || '0');
+      if (paymentId && confirm('Delete this payment?')) {
+        await handleDeletePayment(paymentId);
+      }
+    });
+  });
+}
+
+function startEditPaymentAmount(element: HTMLElement, payment: PaymentWithNames) {
+  const currentAmount = payment.amount;
+
+  // Create input
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.className = 'payment-amount-input';
+  input.value = currentAmount.toFixed(2);
+  input.step = '0.01';
+  input.min = '0';
+
+  // Replace the span with input
+  element.replaceWith(input);
+  input.focus();
+  input.select();
+
+  // Block invalid keys
+  input.addEventListener('keydown', blockInvalidNumberKeys);
+
+  // Handle save on blur or Enter
+  const saveEdit = async () => {
+    const newAmount = parseFloat(input.value);
+    if (!newAmount || newAmount <= 0) {
+      // Restore original
+      restorePaymentAmountDisplay(input, payment);
+      return;
+    }
+
+    if (Math.abs(newAmount - currentAmount) < 0.01) {
+      // No change
+      restorePaymentAmountDisplay(input, payment);
+      return;
+    }
+
+    try {
+      await updatePayment(state.currentSlug!, payment.id, { amount: newAmount });
+      await loadTripData(state.currentSlug!);
+    } catch (error) {
+      alert('Failed to update payment');
+      restorePaymentAmountDisplay(input, payment);
+    }
+  };
+
+  input.addEventListener('blur', saveEdit);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      input.blur();
+    } else if (e.key === 'Escape') {
+      restorePaymentAmountDisplay(input, payment);
+    }
+  });
+}
+
+function restorePaymentAmountDisplay(input: HTMLElement, payment: PaymentWithNames) {
+  const span = document.createElement('span');
+  span.className = 'payment-amount';
+  span.dataset.paymentId = String(payment.id);
+  span.textContent = `$${payment.amount.toFixed(2)}`;
+  input.replaceWith(span);
+
+  // Re-add click handler
+  span.addEventListener('click', () => {
+    startEditPaymentAmount(span, payment);
+  });
+}
+
+async function handleAddPayment() {
+  if (!state.currentSlug) return;
+
+  const fromId = parseInt(paymentFromSelect.value);
+  const toId = parseInt(paymentToSelect.value);
+  const amount = parseFloat(paymentAmountInput.value);
+
+  if (!fromId || !toId || fromId === toId || !amount || amount <= 0) {
+    return;
+  }
+
+  try {
+    await createPayment(state.currentSlug, {
+      from_participant_id: fromId,
+      to_participant_id: toId,
+      amount,
+    });
+
+    // Reset form
+    paymentFromSelect.value = '';
+    paymentToSelect.value = '';
+    paymentAmountInput.value = '';
+    addPaymentBtn.disabled = true;
+
+    // Reload data
+    await loadTripData(state.currentSlug);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      alert(`Failed to add payment: ${error.message}`);
+    } else {
+      alert('Failed to add payment. Please try again.');
+    }
+  }
+}
+
+async function handleDeletePayment(paymentId: number) {
+  if (!state.currentSlug) return;
+
+  try {
+    await deletePayment(state.currentSlug, paymentId);
+    await loadTripData(state.currentSlug);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      alert(`Failed to delete payment: ${error.message}`);
+    } else {
+      alert('Failed to delete payment. Please try again.');
+    }
+  }
+}
+
 // Utility functions
 function escapeHtml(text: string): string {
   const div = document.createElement('div');
@@ -1064,6 +1265,13 @@ settingsBtn.addEventListener('click', handleSettings);
 addParticipantBtn.addEventListener('click', handleAddParticipant);
 expenseForm.addEventListener('submit', handleAddExpense);
 expenseAmount.addEventListener('keydown', blockInvalidNumberKeys);
+
+// Payment form event listeners
+paymentFromSelect.addEventListener('change', validatePaymentForm);
+paymentToSelect.addEventListener('change', validatePaymentForm);
+paymentAmountInput.addEventListener('input', validatePaymentForm);
+paymentAmountInput.addEventListener('keydown', blockInvalidNumberKeys);
+addPaymentBtn.addEventListener('click', handleAddPayment);
 
 // Modal event listeners
 modalClose.addEventListener('click', hideModal);

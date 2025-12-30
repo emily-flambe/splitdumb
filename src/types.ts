@@ -35,6 +35,15 @@ export interface ExpenseSplit {
   amount: number;
 }
 
+export interface Payment {
+  id: number;
+  trip_id: number;
+  from_participant_id: number;
+  to_participant_id: number;
+  amount: number;
+  created_at: number;
+}
+
 export interface EventLog {
   id: number;
   trip_id: number;
@@ -76,6 +85,16 @@ export interface UpdateExpenseRequest {
   splits?: { participant_id: number; amount: number }[];
 }
 
+export interface CreatePaymentRequest {
+  from_participant_id: number;
+  to_participant_id: number;
+  amount: number;
+}
+
+export interface UpdatePaymentRequest {
+  amount: number;
+}
+
 // API response types
 
 export interface TripWithParticipants extends Omit<Trip, 'password_hash'> {
@@ -102,6 +121,11 @@ export interface SimplifiedDebt {
   to_participant_id: number;
   to_participant_name: string;
   amount: number;
+}
+
+export interface PaymentWithNames extends Payment {
+  from_participant_name: string;
+  to_participant_name: string;
 }
 
 // Cloudflare bindings

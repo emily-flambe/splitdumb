@@ -6,6 +6,7 @@ import type { Env } from './types';
 import trips from './api/trips';
 import participants from './api/participants';
 import expenses from './api/expenses';
+import payments from './api/payments';
 import balances from './api/balances';
 import events from './api/events';
 import admin from './api/admin';
@@ -31,6 +32,7 @@ app.get('/api/health', (c) => {
 app.route('/api/trips', trips);
 app.route('/api/trips/:slug/participants', participants);
 app.route('/api/trips/:slug/expenses', expenses);
+app.route('/api/trips/:slug/payments', payments);
 app.route('/api/trips/:slug/balances', balances);
 app.route('/api/trips/:slug/events', events);
 app.route('/api/admin', admin);
