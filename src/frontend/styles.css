@@ -60,16 +60,6 @@ html {
 body {
   font-family: var(--font-sans);
   background: var(--bg-primary);
-  background-image:
-    radial-gradient(ellipse at 10% 0%, rgba(0, 217, 192, 0.1) 0%, transparent 50%),
-    radial-gradient(ellipse at 90% 100%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(255, 255, 255, 0.01) 2px,
-      rgba(255, 255, 255, 0.01) 4px
-    );
   color: var(--text-primary);
   min-height: 100vh;
   line-height: 1.6;
