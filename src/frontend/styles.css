@@ -1494,4 +1494,82 @@ body.offline-mode {
   font-weight: 600;
   text-transform: uppercase;
   margin-left: var(--space-sm);
+/* Settings Info Section */
+.settings-divider {
+  height: 1px;
+  background: var(--border);
+  margin: var(--space-md) 0;
 }
+
+.settings-info-section {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.settings-info-section h3 {
+  margin: 0 0 var(--space-sm);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.settings-info-section p {
+  margin: 0 0 var(--space-md);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Data Info Modal */
+.data-info-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.data-info-item {
+  display: flex;
+  gap: var(--space-md);
+  align-items: flex-start;
+}
+
+.data-info-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  width: 2rem;
+  text-align: center;
+}
+
+.data-info-item h4 {
+  margin: 0 0 var(--space-xs);
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+}
+
+.data-info-item p {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.data-info-credentials {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.data-info-credentials p {
+  margin: 0 0 var(--space-sm);
+  font-size: 0.875rem;
+}
+
+.data-info-credentials .btn {
+  margin-top: var(--space-sm);
+  width: 100%;
+>>>>>>> 2a458f9 (feat: add clear messaging about anonymous data storage)
