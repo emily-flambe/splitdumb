@@ -21,6 +21,7 @@ import {
   getBalances,
   getSimplifiedDebts,
   getEvents,
+  exportTripData,
   getCredentials,
   saveCredentials,
   clearCredentials,
@@ -1160,6 +1161,13 @@ function showSettingsModal() {
       </div>
       <span class="arrow">→</span>
     </div>
+    <div class="settings-option" id="settings-export">
+      <div class="option-info">
+        <h3>Export Data</h3>
+        <p>Download all trip data as JSON</p>
+      </div>
+      <span class="arrow">→</span>
+    </div>
     <div class="settings-option danger" id="settings-delete">
       <div class="option-info">
         <h3>Delete Trip</h3>
@@ -1176,6 +1184,7 @@ function showSettingsModal() {
   document.getElementById('settings-rename')?.addEventListener('click', handleRenameTripSetting);
   document.getElementById('settings-password')?.addEventListener('click', handleChangePasswordSetting);
   document.getElementById('settings-view-credentials')?.addEventListener('click', handleViewCredentialsSetting);
+  document.getElementById('settings-export')?.addEventListener('click', handleExportDataSetting);
   document.getElementById('settings-delete')?.addEventListener('click', handleDeleteTripSetting);
 }
 
@@ -1224,6 +1233,39 @@ function handleViewCredentialsSetting() {
     return;
   }
   showCredentialsModal(credentials.slug, credentials.password, false);
+}
+
+async function handleExportDataSetting() {
+  if (!state.currentSlug || !state.trip) return;
+
+  try {
+    const data = await exportTripData(state.currentSlug);
+
+    // Create filename with trip name and date
+    const tripName = state.trip.name.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+    const date = new Date().toISOString().split('T')[0];
+    const filename = `${tripName}-export-${date}.json`;
+
+    // Create blob and trigger download
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    hideModal();
+    showAlertModal('Trip data exported successfully!', 'success');
+  } catch (error) {
+    if (error instanceof ApiError) {
+      showAlertModal(`Failed to export data: ${error.message}`, 'error');
+    } else {
+      showAlertModal('Failed to export data. Please try again.', 'error');
+    }
+  }
 }
 
 async function handleDeleteTripSetting() {
