@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Splitdumb</string>
+    <string name="title_activity_main">Splitdumb</string>
+    <string name="package_name">com.emilycogsdill.splitdumb</string>
+    <string name="custom_url_scheme">com.emilycogsdill.splitdumb</string>
+</resources>
