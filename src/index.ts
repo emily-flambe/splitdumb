@@ -28,6 +28,24 @@ app.get('/api/health', (c) => {
   });
 });
 
+// Android App Links verification
+// See: https://developer.android.com/training/app-links/verify-android-applinks
+app.get('/.well-known/assetlinks.json', (c) => {
+  return c.json([
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: 'com.emilycogsdill.splitdumb',
+        // SHA256 fingerprint from release keystore - update when release keystore is available
+        sha256_cert_fingerprints: [
+          'TODO:ADD_RELEASE_KEYSTORE_SHA256_FINGERPRINT'
+        ]
+      }
+    }
+  ]);
+});
+
 // Mount API routes
 app.route('/api/trips', trips);
 app.route('/api/trips/:slug/participants', participants);
