@@ -1118,6 +1118,13 @@ select:focus {
   color: #ef4444;
 }
 
+.settings-version {
+  text-align: center;
+  padding: var(--space-lg) 0 var(--space-sm);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
 /* Admin View Styles */
 .admin-trips-list {
   display: flex;

@@ -1,4 +1,6 @@
 // src/frontend/app.ts
+declare const __APP_VERSION__: string;
+
 import type { TripWithParticipants, Participant, ExpenseWithSplits, Balance, SimplifiedDebt, PaymentWithNames, EventLog } from '../types';
 import {
   createTrip,
@@ -1164,6 +1166,9 @@ function showSettingsModal() {
         <p>Permanently delete this trip and all data</p>
       </div>
       <span class="arrow">→</span>
+    </div>
+    <div class="settings-version">
+      Version ${__APP_VERSION__}
     </div>
   `
   );
