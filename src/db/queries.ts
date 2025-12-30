@@ -333,10 +333,16 @@ export async function deleteExpense(db: D1Database, id: number): Promise<boolean
 // ============================================================================
 
 export async function getPaymentsByTrip(db: D1Database, tripId: number): Promise<Payment[]> {
-  const result = await db.prepare(
-    'SELECT * FROM payments WHERE trip_id = ? ORDER BY created_at DESC'
-  ).bind(tripId).all<Payment>();
-  return result.results || [];
+  try {
+    const result = await db.prepare(
+      'SELECT * FROM payments WHERE trip_id = ? ORDER BY created_at DESC'
+    ).bind(tripId).all<Payment>();
+    return result.results || [];
+  } catch (error) {
+    // Table may not exist for trips created before payments feature
+    console.error('Error fetching payments (table may not exist):', error);
+    return [];
+  }
 }
 
 export async function getPaymentById(db: D1Database, id: number): Promise<Payment | null> {
@@ -547,8 +553,14 @@ export async function createEventLog(
 }
 
 export async function getEventLogsByTrip(db: D1Database, tripId: number): Promise<EventLog[]> {
-  const result = await db.prepare(
-    'SELECT * FROM event_logs WHERE trip_id = ? ORDER BY created_at DESC'
-  ).bind(tripId).all<EventLog>();
-  return result.results || [];
+  try {
+    const result = await db.prepare(
+      'SELECT * FROM event_logs WHERE trip_id = ? ORDER BY created_at DESC'
+    ).bind(tripId).all<EventLog>();
+    return result.results || [];
+  } catch (error) {
+    // Table may not exist for trips created before event log feature
+    console.error('Error fetching event logs (table may not exist):', error);
+    return [];
+  }
 }
