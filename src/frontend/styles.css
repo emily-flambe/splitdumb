@@ -608,6 +608,15 @@ select:focus {
   width: 100%;
 }
 
+.confirm-modal-content {
+  margin-bottom: var(--space-lg);
+}
+
+.confirm-modal-content p {
+  margin: 0;
+  line-height: 1.5;
+}
+
 .checkbox-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
