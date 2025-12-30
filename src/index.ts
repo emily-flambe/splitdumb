@@ -2,6 +2,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type { Env } from './types';
+import { generalRateLimit, sensitiveRateLimit } from './lib/rateLimit';
 
 import trips from './api/trips';
 import participants from './api/participants';
@@ -21,6 +22,13 @@ app.use('*', cors({
   origin: '*',
   credentials: true,
 }));
+
+// Apply general rate limiting to all API routes (100 req/min per IP)
+app.use('/api/*', generalRateLimit);
+
+// Apply stricter rate limiting to sensitive operations (10 req/min per IP)
+// This is applied before the general rate limit for trip creation
+app.post('/api/trips', sensitiveRateLimit);
 
 // Health check
 app.get('/api/health', (c) => {
