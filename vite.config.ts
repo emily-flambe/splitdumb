@@ -12,7 +12,11 @@ export default defineConfig({
     outDir: '../../dist',
     emptyOutDir: true,
     rollupOptions: {
-      input: 'src/frontend/index.html'
+      input: {
+        main: 'src/frontend/index.html',
+        privacy: 'src/frontend/privacy.html',
+        tos: 'src/frontend/tos.html'
+      }
     }
   },
   server: {
