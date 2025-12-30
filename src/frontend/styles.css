@@ -297,6 +297,15 @@ select:focus {
   color: var(--accent-teal);
 }
 
+.btn-danger {
+  background: var(--danger);
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #c0392b;
+}
+
 .btn-small {
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
@@ -606,6 +615,15 @@ select:focus {
 
 .input-modal-form input {
   width: 100%;
+}
+
+.confirm-modal-content {
+  margin-bottom: var(--space-lg);
+}
+
+.confirm-modal-content p {
+  margin: 0;
+  line-height: 1.5;
 }
 
 .checkbox-grid {

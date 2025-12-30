@@ -342,7 +342,7 @@ function renderParticipants() {
   participantsList.querySelectorAll('.btn-delete').forEach((btn) => {
     btn.addEventListener('click', async (e) => {
       const participantId = parseInt((e.target as HTMLElement).dataset.participantId || '0');
-      if (participantId && confirm('Remove this participant? Their expenses will remain.')) {
+      if (participantId && await showConfirmModal('Remove this participant? Their expenses will remain.', 'Remove')) {
         await handleDeleteParticipant(participantId);
       }
     });
@@ -811,7 +811,7 @@ async function handleAdminChangePassword(slug: string) {
 async function handleAdminDelete(slug: string) {
   if (!state.adminPassword) return;
 
-  const confirmed = confirm(`Are you sure you want to delete trip "${slug}"?\n\nThis cannot be undone.`);
+  const confirmed = await showConfirmModal(`Are you sure you want to delete trip "${slug}"? This cannot be undone.`);
   if (!confirmed) return;
 
   try {
@@ -832,7 +832,7 @@ async function handleAdminDelete(slug: string) {
 async function handleDeleteAllTestTrips() {
   if (!state.adminPassword) return;
 
-  const confirmed = confirm('Delete ALL test trips? This cannot be undone.');
+  const confirmed = await showConfirmModal('Delete ALL test trips? This cannot be undone.');
   if (!confirmed) return;
 
   try {
@@ -936,6 +936,51 @@ function showInputModal(title: string, label: string, defaultValue = '', inputTy
     // Override modal close to resolve null
     modalClose.removeEventListener('click', hideModal);
     modalClose.addEventListener('click', handleCancel);
+  });
+}
+
+function showConfirmModal(message: string, confirmText = 'Delete', isDangerous = true): Promise<boolean> {
+  return new Promise((resolve) => {
+    showModal(
+      'Confirm',
+      `
+      <div class="confirm-modal-content">
+        <p>${escapeHtml(message)}</p>
+      </div>
+      <div class="modal-actions">
+        <button id="confirm-yes-btn" class="btn ${isDangerous ? 'btn-danger' : 'btn-primary'}">${escapeHtml(confirmText)}</button>
+        <button id="confirm-no-btn" class="btn btn-secondary">Cancel</button>
+      </div>
+    `
+    );
+
+    const yesBtn = document.getElementById('confirm-yes-btn') as HTMLButtonElement;
+    const noBtn = document.getElementById('confirm-no-btn') as HTMLButtonElement;
+
+    yesBtn.focus();
+
+    const cleanup = () => {
+      modalClose.removeEventListener('click', handleNo);
+    };
+
+    const handleYes = () => {
+      cleanup();
+      hideModal();
+      resolve(true);
+    };
+
+    const handleNo = () => {
+      cleanup();
+      hideModal();
+      resolve(false);
+    };
+
+    yesBtn.addEventListener('click', handleYes);
+    noBtn.addEventListener('click', handleNo);
+
+    // Override modal close to resolve false
+    modalClose.removeEventListener('click', hideModal);
+    modalClose.addEventListener('click', handleNo);
   });
 }
 
@@ -1179,8 +1224,8 @@ function handleViewCredentialsSetting() {
 async function handleDeleteTripSetting() {
   if (!state.currentSlug) return;
 
-  const confirmed = confirm(
-    'Are you sure you want to delete this trip?\n\nThis will permanently delete all participants, expenses, and data. This cannot be undone.'
+  const confirmed = await showConfirmModal(
+    'Are you sure you want to delete this trip? This will permanently delete all participants, expenses, and data. This cannot be undone.'
   );
 
   if (!confirmed) return;
@@ -1258,7 +1303,7 @@ function renderPayments() {
   paymentsList.querySelectorAll('.btn-delete-payment').forEach((btn) => {
     btn.addEventListener('click', async (e) => {
       const paymentId = parseInt((e.target as HTMLElement).dataset.paymentId || '0');
-      if (paymentId && confirm('Delete this payment?')) {
+      if (paymentId && await showConfirmModal('Delete this payment?')) {
         await handleDeletePayment(paymentId);
       }
     });
@@ -1506,7 +1551,7 @@ function renderExpenses() {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const expenseId = parseInt((e.target as HTMLElement).dataset.expenseId || '0');
-      if (expenseId && confirm('Delete this expense?')) {
+      if (expenseId && await showConfirmModal('Delete this expense?')) {
         await handleDeleteExpense(expenseId);
       }
     });

@@ -1,4 +1,4 @@
-import { test, expect, Page, Dialog } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
 // Helper to fill and submit input modal
 async function fillInputModal(page: Page, value: string) {
@@ -6,6 +6,13 @@ async function fillInputModal(page: Page, value: string) {
   await page.locator('#input-modal-value').fill(value);
   await page.locator('#input-modal-form button[type="submit"]').click();
   // Wait for modal to close
+  await expect(page.locator('#modal-overlay')).toBeHidden();
+}
+
+// Helper to confirm a confirm modal
+async function confirmModal(page: Page) {
+  await expect(page.locator('#confirm-yes-btn')).toBeVisible();
+  await page.locator('#confirm-yes-btn').click();
   await expect(page.locator('#modal-overlay')).toBeHidden();
 }
 
@@ -155,13 +162,6 @@ test.describe('SplitDumb E2E Tests', () => {
     });
 
     test('can delete an expense and balances update', async ({ page }) => {
-      // Set up confirm dialog handler for delete confirmation
-      page.on('dialog', async (dialog) => {
-        if (dialog.type() === 'confirm') {
-          await dialog.accept();
-        }
-      });
-
       await page.goto('/?test=true');
 
       // Create trip
@@ -185,6 +185,7 @@ test.describe('SplitDumb E2E Tests', () => {
 
       // Delete the expense
       await page.getByLabel('Delete expense').click();
+      await confirmModal(page);
 
       // Verify expense is gone
       await expect(page.getByText('Test Expense $100.00')).not.toBeVisible();
@@ -544,13 +545,6 @@ test.describe('SplitDumb E2E Tests', () => {
     });
 
     test('can delete a payment and balances revert', async ({ page }) => {
-      // Set up confirm dialog handler for delete confirmation
-      page.on('dialog', async (dialog) => {
-        if (dialog.type() === 'confirm') {
-          await dialog.accept();
-        }
-      });
-
       await page.goto('/?test=true');
 
       // Create trip
@@ -599,6 +593,7 @@ test.describe('SplitDumb E2E Tests', () => {
 
       // Delete the payment
       await page.locator('.btn-delete-payment').click();
+      await confirmModal(page);
 
       // Wait for payment to be removed
       await expect(page.locator('.payment-item')).not.toBeVisible();
@@ -675,13 +670,6 @@ test.describe('SplitDumb E2E Tests', () => {
     });
 
     test('logs expense modified and deleted events', async ({ page }) => {
-      // Set up confirm dialog handler for delete confirmation
-      page.on('dialog', async (dialog) => {
-        if (dialog.type() === 'confirm') {
-          await dialog.accept();
-        }
-      });
-
       await page.goto('/?test=true');
       await page.getByRole('button', { name: /Create Trip/i }).click();
       await fillInputModal(page, 'Activity Test');
@@ -717,6 +705,7 @@ test.describe('SplitDumb E2E Tests', () => {
 
       // Now delete the expense using the delete button on the expense item
       await page.getByLabel('Delete expense').click();
+      await confirmModal(page);
 
       // Should show expense deleted event
       await expect(page.locator('#event-log').getByText('"Updated Dinner" was deleted')).toBeVisible();
