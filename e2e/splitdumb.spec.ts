@@ -1,5 +1,14 @@
 import { test, expect, Page, Dialog } from '@playwright/test';
 
+// Helper to fill and submit input modal
+async function fillInputModal(page: Page, value: string) {
+  await expect(page.locator('#input-modal-value')).toBeVisible();
+  await page.locator('#input-modal-value').fill(value);
+  await page.locator('#input-modal-form button[type="submit"]').click();
+  // Wait for modal to close
+  await expect(page.locator('#modal-overlay')).toBeHidden();
+}
+
 test.describe('SplitDumb E2E Tests', () => {
   test.describe('Landing Page', () => {
     test('displays landing page with create and join options', async ({ page }) => {
@@ -16,16 +25,14 @@ test.describe('SplitDumb E2E Tests', () => {
 
   test.describe('Trip Creation Flow', () => {
     test('creates a new trip and shows credentials', async ({ page }) => {
-      // Set up dialog handler BEFORE navigating
-      page.on('dialog', async (dialog) => {
-        await dialog.accept('Test Trip');
-      });
-
       // Use ?test=true to mark trips created as test trips
       await page.goto('/?test=true');
 
       // Click create trip button
       await page.getByRole('button', { name: /Create Trip/i }).click();
+
+      // Fill in the trip name modal
+      await fillInputModal(page, 'Test Trip');
 
       // Wait for navigation to trip page
       await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
@@ -40,21 +47,11 @@ test.describe('SplitDumb E2E Tests', () => {
 
   test.describe('Full Trip Flow', () => {
     test('complete trip workflow: create, add participants, add expenses, verify balances', async ({ page }) => {
-      // Track dialogs - set up BEFORE navigating
-      const dialogResponses = ['E2E Test Trip', 'Alice', 'Bob', 'Charlie'];
-      let dialogIndex = 0;
-      page.on('dialog', async (dialog) => {
-        if (dialogIndex < dialogResponses.length) {
-          await dialog.accept(dialogResponses[dialogIndex++]);
-        } else {
-          await dialog.accept();
-        }
-      });
-
       await page.goto('/?test=true');
 
       // Create trip
       await page.getByRole('button', { name: /Create Trip/i }).click();
+      await fillInputModal(page, 'E2E Test Trip');
       await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
 
       // Wait for credentials modal
@@ -72,14 +69,17 @@ test.describe('SplitDumb E2E Tests', () => {
       await expect(page.getByRole('heading', { name: 'E2E Test Trip' })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Participants' })).toBeVisible();
 
-      // Add participants (dialogs are already set up)
+      // Add participants
       await page.getByRole('button', { name: '+ Add' }).click();
+      await fillInputModal(page, 'Alice');
       await expect(page.locator('#participants-list').getByText('Alice')).toBeVisible();
 
       await page.getByRole('button', { name: '+ Add' }).click();
+      await fillInputModal(page, 'Bob');
       await expect(page.locator('#participants-list').getByText('Bob')).toBeVisible();
 
       await page.getByRole('button', { name: '+ Add' }).click();
+      await fillInputModal(page, 'Charlie');
       await expect(page.locator('#participants-list').getByText('Charlie')).toBeVisible();
 
       // Verify participants are in the payer dropdown (options exist but aren't visible until dropdown opens)
@@ -106,25 +106,17 @@ test.describe('SplitDumb E2E Tests', () => {
     });
 
     test('can edit an expense via modal', async ({ page }) => {
-      const dialogResponses = ['Edit Modal Test', 'TestUser'];
-      let dialogIndex = 0;
-      page.on('dialog', async (dialog) => {
-        if (dialogIndex < dialogResponses.length) {
-          await dialog.accept(dialogResponses[dialogIndex++]);
-        } else {
-          await dialog.accept();
-        }
-      });
-
       await page.goto('/?test=true');
 
       // Create trip
       await page.getByRole('button', { name: /Create Trip/i }).click();
+      await fillInputModal(page, 'Edit Modal Test');
       await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
       await page.getByRole('button', { name: 'Continue to Trip' }).click();
 
       // Add a participant
       await page.getByRole('button', { name: '+ Add' }).click();
+      await fillInputModal(page, 'TestUser');
       await expect(page.locator('#participants-list').getByText('TestUser')).toBeVisible();
 
       // Add an expense
@@ -163,14 +155,9 @@ test.describe('SplitDumb E2E Tests', () => {
     });
 
     test('can delete an expense and balances update', async ({ page }) => {
-      const dialogResponses = ['Delete Test', 'TestUser'];
-      let dialogIndex = 0;
+      // Set up confirm dialog handler for delete confirmation
       page.on('dialog', async (dialog) => {
         if (dialog.type() === 'confirm') {
-          await dialog.accept();
-        } else if (dialogIndex < dialogResponses.length) {
-          await dialog.accept(dialogResponses[dialogIndex++]);
-        } else {
           await dialog.accept();
         }
       });
@@ -179,11 +166,13 @@ test.describe('SplitDumb E2E Tests', () => {
 
       // Create trip
       await page.getByRole('button', { name: /Create Trip/i }).click();
+      await fillInputModal(page, 'Delete Test');
       await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
       await page.getByRole('button', { name: 'Continue to Trip' }).click();
 
       // Add a participant
       await page.getByRole('button', { name: '+ Add' }).click();
+      await fillInputModal(page, 'TestUser');
       await expect(page.locator('#participants-list').getByText('TestUser')).toBeVisible();
 
       // Add an expense
@@ -203,27 +192,20 @@ test.describe('SplitDumb E2E Tests', () => {
     });
 
     test('can add expense with percentage-based custom split', async ({ page }) => {
-      const dialogResponses = ['Percentage Test', 'Alice', 'Bob'];
-      let dialogIndex = 0;
-      page.on('dialog', async (dialog) => {
-        if (dialogIndex < dialogResponses.length) {
-          await dialog.accept(dialogResponses[dialogIndex++]);
-        } else {
-          await dialog.accept();
-        }
-      });
-
       await page.goto('/?test=true');
 
       // Create trip
       await page.getByRole('button', { name: /Create Trip/i }).click();
+      await fillInputModal(page, 'Percentage Test');
       await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
       await page.getByRole('button', { name: 'Continue to Trip' }).click();
 
       // Add two participants
       await page.getByRole('button', { name: '+ Add' }).click();
+      await fillInputModal(page, 'Alice');
       await expect(page.locator('#participants-list').getByText('Alice')).toBeVisible();
       await page.getByRole('button', { name: '+ Add' }).click();
+      await fillInputModal(page, 'Bob');
       await expect(page.locator('#participants-list').getByText('Bob')).toBeVisible();
 
       // Add expense with custom percentage split: Alice pays $100, split 75/25
@@ -257,15 +239,11 @@ test.describe('SplitDumb E2E Tests', () => {
 
   test.describe('Trip Join Flow', () => {
     test('can join an existing trip with credentials', async ({ page }) => {
-      // Set up dialog handler BEFORE navigating
-      page.on('dialog', async (dialog) => {
-        await dialog.accept('Join Test Trip');
-      });
-
       await page.goto('/?test=true');
 
       // Create a trip first
       await page.getByRole('button', { name: /Create Trip/i }).click();
+      await fillInputModal(page, 'Join Test Trip');
       await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
       await expect(page.getByRole('heading', { name: 'Trip Created!' })).toBeVisible();
 
@@ -300,12 +278,9 @@ test.describe('SplitDumb E2E Tests', () => {
       // Grant clipboard permissions
       await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
-      page.on('dialog', async (dialog) => {
-        await dialog.accept(dialog.type() === 'prompt' ? 'Share Test' : undefined);
-      });
-
       await page.goto('/?test=true');
       await page.getByRole('button', { name: /Create Trip/i }).click();
+      await fillInputModal(page, 'Share Test');
       await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
       await page.getByRole('button', { name: 'Continue to Trip' }).click();
 
@@ -323,12 +298,9 @@ test.describe('SplitDumb E2E Tests', () => {
 
   test.describe('Settings', () => {
     test('can view trip credentials in settings', async ({ page }) => {
-      page.on('dialog', async (dialog) => {
-        await dialog.accept('Settings Test');
-      });
-
       await page.goto('/?test=true');
       await page.getByRole('button', { name: /Create Trip/i }).click();
+      await fillInputModal(page, 'Settings Test');
       await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
       await page.getByRole('button', { name: 'Continue to Trip' }).click();
 
@@ -365,27 +337,21 @@ test.describe('SplitDumb E2E Tests', () => {
 
   test.describe('Debt Simplification', () => {
     test('shows correct simplified debts for complex scenario', async ({ page }) => {
-      const dialogResponses = ['Complex Test', 'Alice', 'Bob', 'Charlie'];
-      let dialogIndex = 0;
-      page.on('dialog', async (dialog) => {
-        if (dialogIndex < dialogResponses.length) {
-          await dialog.accept(dialogResponses[dialogIndex++]);
-        } else {
-          await dialog.accept();
-        }
-      });
-
       await page.goto('/?test=true');
 
       // Create trip and add participants
       await page.getByRole('button', { name: /Create Trip/i }).click();
+      await fillInputModal(page, 'Complex Test');
       await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
       await page.getByRole('button', { name: 'Continue to Trip' }).click();
       await page.getByRole('button', { name: '+ Add' }).click();
+      await fillInputModal(page, 'Alice');
       await expect(page.locator('#participants-list').getByText('Alice')).toBeVisible();
       await page.getByRole('button', { name: '+ Add' }).click();
+      await fillInputModal(page, 'Bob');
       await expect(page.locator('#participants-list').getByText('Bob')).toBeVisible();
       await page.getByRole('button', { name: '+ Add' }).click();
+      await fillInputModal(page, 'Charlie');
       await expect(page.locator('#participants-list').getByText('Charlie')).toBeVisible();
 
       // Add multiple expenses
@@ -431,23 +397,15 @@ test.describe('SplitDumb E2E Tests', () => {
     });
 
     test('shows settled message when all debts are paid', async ({ page }) => {
-      const dialogResponses = ['Settled Test', 'User1'];
-      let dialogIndex = 0;
-      page.on('dialog', async (dialog) => {
-        if (dialogIndex < dialogResponses.length) {
-          await dialog.accept(dialogResponses[dialogIndex++]);
-        } else {
-          await dialog.accept();
-        }
-      });
-
       await page.goto('/?test=true');
 
       // Create trip and add one participant
       await page.getByRole('button', { name: /Create Trip/i }).click();
+      await fillInputModal(page, 'Settled Test');
       await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
       await page.getByRole('button', { name: 'Continue to Trip' }).click();
       await page.getByRole('button', { name: '+ Add' }).click();
+      await fillInputModal(page, 'User1');
 
       // Add expense where user pays for themselves
       await page.getByRole('textbox', { name: /what was it for/i }).fill('Solo');
@@ -468,27 +426,20 @@ test.describe('SplitDumb E2E Tests', () => {
 
   test.describe('Payments', () => {
     test('can add a payment and balances update', async ({ page }) => {
-      const dialogResponses = ['Payment Test', 'Alice', 'Bob'];
-      let dialogIndex = 0;
-      page.on('dialog', async (dialog) => {
-        if (dialogIndex < dialogResponses.length) {
-          await dialog.accept(dialogResponses[dialogIndex++]);
-        } else {
-          await dialog.accept();
-        }
-      });
-
       await page.goto('/?test=true');
 
       // Create trip
       await page.getByRole('button', { name: /Create Trip/i }).click();
+      await fillInputModal(page, 'Payment Test');
       await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
       await page.getByRole('button', { name: 'Continue to Trip' }).click();
 
       // Add participants
       await page.getByRole('button', { name: '+ Add' }).click();
+      await fillInputModal(page, 'Alice');
       await expect(page.locator('#participants-list').getByText('Alice')).toBeVisible();
       await page.getByRole('button', { name: '+ Add' }).click();
+      await fillInputModal(page, 'Bob');
       await expect(page.locator('#participants-list').getByText('Bob')).toBeVisible();
 
       // Wait for participant checkboxes to be updated
@@ -534,27 +485,20 @@ test.describe('SplitDumb E2E Tests', () => {
     });
 
     test('can edit a payment amount inline', async ({ page }) => {
-      const dialogResponses = ['Edit Payment Test', 'Alice', 'Bob'];
-      let dialogIndex = 0;
-      page.on('dialog', async (dialog) => {
-        if (dialogIndex < dialogResponses.length) {
-          await dialog.accept(dialogResponses[dialogIndex++]);
-        } else {
-          await dialog.accept();
-        }
-      });
-
       await page.goto('/?test=true');
 
       // Create trip
       await page.getByRole('button', { name: /Create Trip/i }).click();
+      await fillInputModal(page, 'Edit Payment Test');
       await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
       await page.getByRole('button', { name: 'Continue to Trip' }).click();
 
       // Add participants
       await page.getByRole('button', { name: '+ Add' }).click();
+      await fillInputModal(page, 'Alice');
       await expect(page.locator('#participants-list').getByText('Alice')).toBeVisible();
       await page.getByRole('button', { name: '+ Add' }).click();
+      await fillInputModal(page, 'Bob');
       await expect(page.locator('#participants-list').getByText('Bob')).toBeVisible();
 
       // Wait for participant checkboxes to be updated
@@ -600,14 +544,9 @@ test.describe('SplitDumb E2E Tests', () => {
     });
 
     test('can delete a payment and balances revert', async ({ page }) => {
-      const dialogResponses = ['Delete Payment Test', 'Alice', 'Bob'];
-      let dialogIndex = 0;
+      // Set up confirm dialog handler for delete confirmation
       page.on('dialog', async (dialog) => {
         if (dialog.type() === 'confirm') {
-          await dialog.accept();
-        } else if (dialogIndex < dialogResponses.length) {
-          await dialog.accept(dialogResponses[dialogIndex++]);
-        } else {
           await dialog.accept();
         }
       });
@@ -616,13 +555,16 @@ test.describe('SplitDumb E2E Tests', () => {
 
       // Create trip
       await page.getByRole('button', { name: /Create Trip/i }).click();
+      await fillInputModal(page, 'Delete Payment Test');
       await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
       await page.getByRole('button', { name: 'Continue to Trip' }).click();
 
       // Add participants
       await page.getByRole('button', { name: '+ Add' }).click();
+      await fillInputModal(page, 'Alice');
       await expect(page.locator('#participants-list').getByText('Alice')).toBeVisible();
       await page.getByRole('button', { name: '+ Add' }).click();
+      await fillInputModal(page, 'Bob');
       await expect(page.locator('#participants-list').getByText('Bob')).toBeVisible();
 
       // Wait for participant checkboxes to be updated
@@ -672,18 +614,9 @@ test.describe('SplitDumb E2E Tests', () => {
 
   test.describe('Activity Log', () => {
     test('shows empty state initially', async ({ page }) => {
-      const dialogResponses = ['Activity Test'];
-      let dialogIndex = 0;
-      page.on('dialog', async (dialog) => {
-        if (dialogIndex < dialogResponses.length) {
-          await dialog.accept(dialogResponses[dialogIndex++]);
-        } else {
-          await dialog.accept();
-        }
-      });
-
       await page.goto('/?test=true');
       await page.getByRole('button', { name: /Create Trip/i }).click();
+      await fillInputModal(page, 'Activity Test');
       await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
       await page.getByRole('button', { name: 'Continue to Trip' }).click();
 
@@ -695,23 +628,15 @@ test.describe('SplitDumb E2E Tests', () => {
     });
 
     test('logs participant added event', async ({ page }) => {
-      const dialogResponses = ['Activity Test', 'Alice'];
-      let dialogIndex = 0;
-      page.on('dialog', async (dialog) => {
-        if (dialogIndex < dialogResponses.length) {
-          await dialog.accept(dialogResponses[dialogIndex++]);
-        } else {
-          await dialog.accept();
-        }
-      });
-
       await page.goto('/?test=true');
       await page.getByRole('button', { name: /Create Trip/i }).click();
+      await fillInputModal(page, 'Activity Test');
       await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
       await page.getByRole('button', { name: 'Continue to Trip' }).click();
 
       // Add a participant
       await page.getByRole('button', { name: '+ Add' }).click();
+      await fillInputModal(page, 'Alice');
       await expect(page.locator('#participants-list').getByText('Alice')).toBeVisible();
 
       // Scroll to activity section
@@ -722,23 +647,15 @@ test.describe('SplitDumb E2E Tests', () => {
     });
 
     test('logs expense added event', async ({ page }) => {
-      const dialogResponses = ['Activity Test', 'Alice'];
-      let dialogIndex = 0;
-      page.on('dialog', async (dialog) => {
-        if (dialogIndex < dialogResponses.length) {
-          await dialog.accept(dialogResponses[dialogIndex++]);
-        } else {
-          await dialog.accept();
-        }
-      });
-
       await page.goto('/?test=true');
       await page.getByRole('button', { name: /Create Trip/i }).click();
+      await fillInputModal(page, 'Activity Test');
       await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
       await page.getByRole('button', { name: 'Continue to Trip' }).click();
 
       // Add a participant
       await page.getByRole('button', { name: '+ Add' }).click();
+      await fillInputModal(page, 'Alice');
       await expect(page.locator('#participants-list').getByText('Alice')).toBeVisible();
 
       // Add an expense
@@ -758,25 +675,22 @@ test.describe('SplitDumb E2E Tests', () => {
     });
 
     test('logs expense modified and deleted events', async ({ page }) => {
-      const dialogResponses = ['Activity Test', 'Alice'];
-      let dialogIndex = 0;
+      // Set up confirm dialog handler for delete confirmation
       page.on('dialog', async (dialog) => {
         if (dialog.type() === 'confirm') {
-          await dialog.accept();
-        } else if (dialogIndex < dialogResponses.length) {
-          await dialog.accept(dialogResponses[dialogIndex++]);
-        } else {
           await dialog.accept();
         }
       });
 
       await page.goto('/?test=true');
       await page.getByRole('button', { name: /Create Trip/i }).click();
+      await fillInputModal(page, 'Activity Test');
       await expect(page).toHaveURL(/\/[a-z]+-[a-z]+-[a-z]+$/, { timeout: 10000 });
       await page.getByRole('button', { name: 'Continue to Trip' }).click();
 
       // Add a participant
       await page.getByRole('button', { name: '+ Add' }).click();
+      await fillInputModal(page, 'Alice');
       await expect(page.locator('#participants-list').getByText('Alice')).toBeVisible();
 
       // Add an expense
