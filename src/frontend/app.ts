@@ -126,7 +126,7 @@ async function handleRoute() {
   } else if (path === '/admin') {
     // Prompt for admin password if not already authenticated
     if (!state.adminPassword) {
-      const password = prompt('Enter admin password:');
+      const password = await showInputModal('Admin Login', 'Enter admin password:', '', 'password');
       if (!password) {
         navigateTo('/');
         return;
@@ -158,11 +158,11 @@ async function verifyAdminPassword(password: string) {
       state.adminPassword = password;
       showAdminView();
     } else {
-      alert('Invalid admin password');
+      showAlertModal('Invalid admin password', 'error');
       navigateTo('/');
     }
   } catch (error) {
-    alert('Failed to verify admin password');
+    showAlertModal('Failed to verify admin password', 'error');
     navigateTo('/');
   }
 }
@@ -204,7 +204,7 @@ function showAdminView() {
 
 // Landing page handlers
 async function handleCreateTrip() {
-  const tripName = prompt('Enter trip name:');
+  const tripName = await showInputModal('Create Trip', 'Trip name:');
   if (!tripName?.trim()) return;
 
   // Check if test mode is enabled via URL parameter (for E2E tests)
@@ -220,9 +220,9 @@ async function handleCreateTrip() {
     }, 500);
   } catch (error) {
     if (error instanceof ApiError) {
-      alert(`Failed to create trip: ${error.message}`);
+      showAlertModal(`Failed to create trip: ${error.message}`, 'error');
     } else {
-      alert('Failed to create trip. Please try again.');
+      showAlertModal('Failed to create trip. Please try again.', 'error');
     }
   }
 }
@@ -240,9 +240,9 @@ async function handleJoinTrip(event: Event) {
     navigateTo(`/${slug}`);
   } catch (error) {
     if (error instanceof ApiError) {
-      alert(`Failed to join trip: ${error.message}`);
+      showAlertModal(`Failed to join trip: ${error.message}`, 'error');
     } else {
-      alert('Failed to join trip. Please try again.');
+      showAlertModal('Failed to join trip. Please try again.', 'error');
     }
   }
 }
@@ -279,10 +279,10 @@ async function loadTripData(slug: string) {
         clearCredentials();
         navigateTo('/');
       } else {
-        alert(`Failed to load trip: ${error.message}`);
+        showAlertModal(`Failed to load trip: ${error.message}`, 'error');
       }
     } else {
-      alert('Failed to load trip. Please try again.');
+      showAlertModal('Failed to load trip. Please try again.', 'error');
     }
   } finally {
     state.loading = false;
@@ -448,7 +448,7 @@ function renderBalances() {
 async function handleAddParticipant() {
   if (!state.currentSlug) return;
 
-  const name = prompt('Enter participant name:');
+  const name = await showInputModal('Add Participant', 'Participant name:');
   if (!name?.trim()) return;
 
   try {
@@ -456,9 +456,9 @@ async function handleAddParticipant() {
     await loadTripData(state.currentSlug);
   } catch (error) {
     if (error instanceof ApiError) {
-      alert(`Failed to add participant: ${error.message}`);
+      showAlertModal(`Failed to add participant: ${error.message}`, 'error');
     } else {
-      alert('Failed to add participant. Please try again.');
+      showAlertModal('Failed to add participant. Please try again.', 'error');
     }
   }
 }
@@ -471,9 +471,9 @@ async function handleDeleteParticipant(participantId: number) {
     await loadTripData(state.currentSlug);
   } catch (error) {
     if (error instanceof ApiError) {
-      alert(`Failed to delete participant: ${error.message}`);
+      showAlertModal(`Failed to delete participant: ${error.message}`, 'error');
     } else {
-      alert('Failed to delete participant. Please try again.');
+      showAlertModal('Failed to delete participant. Please try again.', 'error');
     }
   }
 }
@@ -487,7 +487,7 @@ async function handleAddExpense(event: Event) {
   const paidBy = parseInt(expensePayer.value);
 
   if (!description || !amount || !paidBy) {
-    alert('Please fill in all fields');
+    showAlertModal('Please fill in all fields', 'error');
     return;
   }
 
@@ -515,14 +515,14 @@ async function handleAddExpense(event: Event) {
       }
 
       if (percentages.length === 0) {
-        alert('Please enter at least one percentage');
+        showAlertModal('Please enter at least one percentage', 'error');
         return;
       }
 
       // Validate that percentages sum to 100%
       const totalPercentage = percentages.reduce((sum, p) => sum + p.percentage, 0);
       if (Math.abs(totalPercentage - 100) > 0.01) {
-        alert(`Percentages must total 100%. Current total: ${totalPercentage.toFixed(2)}%`);
+        showAlertModal(`Percentages must total 100%. Current total: ${totalPercentage.toFixed(2)}%`, 'error');
         return;
       }
 
@@ -544,14 +544,14 @@ async function handleAddExpense(event: Event) {
       }
 
       if (splits.length === 0) {
-        alert('Please enter at least one split amount');
+        showAlertModal('Please enter at least one split amount', 'error');
         return;
       }
 
       // Validate that splits sum to expense amount
       const totalSplits = splits.reduce((sum, split) => sum + split.amount, 0);
       if (Math.abs(totalSplits - amount) > 0.01) {
-        alert(`Split amounts ($${totalSplits.toFixed(2)}) must equal expense amount ($${amount.toFixed(2)})`);
+        showAlertModal(`Split amounts ($${totalSplits.toFixed(2)}) must equal expense amount ($${amount.toFixed(2)})`, 'error');
         return;
       }
     }
@@ -562,7 +562,7 @@ async function handleAddExpense(event: Event) {
     ) as NodeListOf<HTMLInputElement>;
 
     if (checkboxes.length === 0) {
-      alert('Please select at least one participant to split with');
+      showAlertModal('Please select at least one participant to split with', 'error');
       return;
     }
 
@@ -602,9 +602,9 @@ async function handleAddExpense(event: Event) {
     await loadTripData(state.currentSlug);
   } catch (error) {
     if (error instanceof ApiError) {
-      alert(`Failed to add expense: ${error.message}`);
+      showAlertModal(`Failed to add expense: ${error.message}`, 'error');
     } else {
-      alert('Failed to add expense. Please try again.');
+      showAlertModal('Failed to add expense. Please try again.', 'error');
     }
   }
 }
@@ -617,9 +617,9 @@ async function handleDeleteExpense(expenseId: number) {
     await loadTripData(state.currentSlug);
   } catch (error) {
     if (error instanceof ApiError) {
-      alert(`Failed to delete expense: ${error.message}`);
+      showAlertModal(`Failed to delete expense: ${error.message}`, 'error');
     } else {
-      alert('Failed to delete expense. Please try again.');
+      showAlertModal('Failed to delete expense. Please try again.', 'error');
     }
   }
 }
@@ -646,8 +646,8 @@ ${credentials.password}`;
       }, 2000);
     })
     .catch(() => {
-      // Fallback: show the message
-      prompt('Copy this message to share:', shareMessage);
+      // Fallback: show the message in a modal
+      showAlertModal(`Copy this message to share:\n\n${shareMessage}`, 'info');
     });
 }
 
@@ -677,7 +677,7 @@ async function loadAdminData() {
     state.adminTrips = await response.json();
     renderAdminTrips();
   } catch (error) {
-    alert('Failed to load admin data');
+    showAlertModal('Failed to load admin data', 'error');
     console.error(error);
   }
 }
@@ -761,7 +761,7 @@ async function handleAdminRename(slug: string) {
   if (!state.adminPassword) return;
 
   const trip = state.adminTrips.find((t) => t.slug === slug);
-  const newName = prompt('Enter new trip name:', trip?.name || '');
+  const newName = await showInputModal('Rename Trip', 'New trip name:', trip?.name || '');
   if (!newName?.trim()) return;
 
   try {
@@ -778,7 +778,7 @@ async function handleAdminRename(slug: string) {
 
     await loadAdminData();
   } catch (error) {
-    alert('Failed to rename trip');
+    showAlertModal('Failed to rename trip', 'error');
     console.error(error);
   }
 }
@@ -786,7 +786,7 @@ async function handleAdminRename(slug: string) {
 async function handleAdminChangePassword(slug: string) {
   if (!state.adminPassword) return;
 
-  const newPassword = prompt('Enter new password for this trip:');
+  const newPassword = await showInputModal('Change Password', 'New password:', '', 'password');
   if (!newPassword?.trim()) return;
 
   try {
@@ -801,9 +801,9 @@ async function handleAdminChangePassword(slug: string) {
 
     if (!response.ok) throw new Error('Failed to change password');
 
-    alert('Password updated successfully!');
+    showAlertModal('Password updated successfully!', 'success');
   } catch (error) {
-    alert('Failed to change password');
+    showAlertModal('Failed to change password', 'error');
     console.error(error);
   }
 }
@@ -824,7 +824,7 @@ async function handleAdminDelete(slug: string) {
 
     await loadAdminData();
   } catch (error) {
-    alert('Failed to delete trip');
+    showAlertModal('Failed to delete trip', 'error');
     console.error(error);
   }
 }
@@ -844,10 +844,10 @@ async function handleDeleteAllTestTrips() {
     if (!response.ok) throw new Error('Failed to delete test trips');
 
     const result = await response.json();
-    alert(result.message);
+    showAlertModal(result.message, 'success');
     await loadAdminData();
   } catch (error) {
-    alert('Failed to delete test trips');
+    showAlertModal('Failed to delete test trips', 'error');
     console.error(error);
   }
 }
@@ -861,6 +861,82 @@ function showModal(title: string, content: string) {
 
 function hideModal() {
   modalOverlay.style.display = 'none';
+}
+
+function showAlertModal(message: string, type: 'error' | 'success' | 'info' = 'info') {
+  const iconMap = {
+    error: '⚠️',
+    success: '✓',
+    info: 'ℹ️'
+  };
+  showModal(
+    type === 'error' ? 'Error' : type === 'success' ? 'Success' : 'Notice',
+    `
+    <div class="alert-modal-content">
+      <span class="alert-icon ${type}">${iconMap[type]}</span>
+      <p>${escapeHtml(message)}</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="alert-ok-btn">OK</button>
+    </div>
+  `
+  );
+  document.getElementById('alert-ok-btn')?.addEventListener('click', hideModal);
+}
+
+function showInputModal(title: string, label: string, defaultValue = '', inputType = 'text'): Promise<string | null> {
+  return new Promise((resolve) => {
+    showModal(
+      title,
+      `
+      <form id="input-modal-form" class="input-modal-form">
+        <label for="input-modal-value">${escapeHtml(label)}</label>
+        <input
+          type="${inputType}"
+          id="input-modal-value"
+          value="${escapeHtml(defaultValue)}"
+          required
+          autofocus
+        >
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-primary">OK</button>
+          <button type="button" id="input-cancel-btn" class="btn btn-secondary">Cancel</button>
+        </div>
+      </form>
+    `
+    );
+
+    const form = document.getElementById('input-modal-form') as HTMLFormElement;
+    const input = document.getElementById('input-modal-value') as HTMLInputElement;
+    const cancelBtn = document.getElementById('input-cancel-btn') as HTMLButtonElement;
+
+    input.focus();
+    input.select();
+
+    const cleanup = () => {
+      modalClose.removeEventListener('click', handleCancel);
+    };
+
+    const handleCancel = () => {
+      cleanup();
+      hideModal();
+      resolve(null);
+    };
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const value = input.value.trim();
+      cleanup();
+      hideModal();
+      resolve(value || null);
+    });
+
+    cancelBtn.addEventListener('click', handleCancel);
+
+    // Override modal close to resolve null
+    modalClose.removeEventListener('click', hideModal);
+    modalClose.addEventListener('click', handleCancel);
+  });
 }
 
 function showPasswordEntryModal(slug: string) {
@@ -972,7 +1048,7 @@ function showCredentialsModal(slug: string, password: string, isNewTrip = false)
   );
 
   document.getElementById('edit-password-btn')?.addEventListener('click', async () => {
-    const newPassword = prompt('Enter new password:', currentPassword);
+    const newPassword = await showInputModal('Change Password', 'New password:', currentPassword);
     if (!newPassword?.trim() || newPassword.trim() === currentPassword) return;
 
     try {
@@ -984,7 +1060,7 @@ function showCredentialsModal(slug: string, password: string, isNewTrip = false)
       }
       saveCredentials(slug, currentPassword);
     } catch (error) {
-      alert('Failed to update password. Please try again.');
+      showAlertModal('Failed to update password. Please try again.', 'error');
     }
   });
 
@@ -1056,7 +1132,7 @@ function showSettingsModal() {
 async function handleRenameTripSetting() {
   if (!state.currentSlug || !state.trip) return;
 
-  const newName = prompt('Enter new trip name:', state.trip.name);
+  const newName = await showInputModal('Rename Trip', 'New trip name:', state.trip.name);
   if (!newName?.trim() || newName.trim() === state.trip.name) return;
 
   try {
@@ -1065,9 +1141,9 @@ async function handleRenameTripSetting() {
     hideModal();
   } catch (error) {
     if (error instanceof ApiError) {
-      alert(`Failed to rename trip: ${error.message}`);
+      showAlertModal(`Failed to rename trip: ${error.message}`, 'error');
     } else {
-      alert('Failed to rename trip. Please try again.');
+      showAlertModal('Failed to rename trip. Please try again.', 'error');
     }
   }
 }
@@ -1075,18 +1151,18 @@ async function handleRenameTripSetting() {
 async function handleChangePasswordSetting() {
   if (!state.currentSlug) return;
 
-  const newPassword = prompt('Enter new password:');
+  const newPassword = await showInputModal('Change Password', 'New password:', '', 'password');
   if (!newPassword?.trim()) return;
 
   try {
     await updateTrip(state.currentSlug, { password: newPassword.trim() });
-    alert('Password updated successfully!');
+    showAlertModal('Password updated successfully!', 'success');
     hideModal();
   } catch (error) {
     if (error instanceof ApiError) {
-      alert(`Failed to change password: ${error.message}`);
+      showAlertModal(`Failed to change password: ${error.message}`, 'error');
     } else {
-      alert('Failed to change password. Please try again.');
+      showAlertModal('Failed to change password. Please try again.', 'error');
     }
   }
 }
@@ -1094,7 +1170,7 @@ async function handleChangePasswordSetting() {
 function handleViewCredentialsSetting() {
   const credentials = getCredentials();
   if (!credentials) {
-    alert('Credentials not found');
+    showAlertModal('Credentials not found', 'error');
     return;
   }
   showCredentialsModal(credentials.slug, credentials.password, false);
@@ -1115,9 +1191,9 @@ async function handleDeleteTripSetting() {
     navigateTo('/');
   } catch (error) {
     if (error instanceof ApiError) {
-      alert(`Failed to delete trip: ${error.message}`);
+      showAlertModal(`Failed to delete trip: ${error.message}`, 'error');
     } else {
-      alert('Failed to delete trip. Please try again.');
+      showAlertModal('Failed to delete trip. Please try again.', 'error');
     }
   }
 }
@@ -1227,7 +1303,7 @@ function startEditPaymentAmount(element: HTMLElement, payment: PaymentWithNames)
       await updatePayment(state.currentSlug!, payment.id, { amount: newAmount });
       await loadTripData(state.currentSlug!);
     } catch (error) {
-      alert('Failed to update payment');
+      showAlertModal('Failed to update payment', 'error');
       restorePaymentAmountDisplay(input, payment);
     }
   };
@@ -1284,9 +1360,9 @@ async function handleAddPayment() {
     await loadTripData(state.currentSlug);
   } catch (error) {
     if (error instanceof ApiError) {
-      alert(`Failed to add payment: ${error.message}`);
+      showAlertModal(`Failed to add payment: ${error.message}`, 'error');
     } else {
-      alert('Failed to add payment. Please try again.');
+      showAlertModal('Failed to add payment. Please try again.', 'error');
     }
   }
 }
@@ -1299,9 +1375,9 @@ async function handleDeletePayment(paymentId: number) {
     await loadTripData(state.currentSlug);
   } catch (error) {
     if (error instanceof ApiError) {
-      alert(`Failed to delete payment: ${error.message}`);
+      showAlertModal(`Failed to delete payment: ${error.message}`, 'error');
     } else {
-      alert('Failed to delete payment. Please try again.');
+      showAlertModal('Failed to delete payment. Please try again.', 'error');
     }
   }
 }
@@ -1575,12 +1651,12 @@ async function handleEditExpenseSubmit(expenseId: number) {
   const customToggle = document.getElementById('edit-custom-splits-toggle') as HTMLInputElement;
 
   if (!description) {
-    alert('Please enter a description');
+    showAlertModal('Please enter a description', 'error');
     return;
   }
 
   if (!amount || amount <= 0) {
-    alert('Please enter a valid amount');
+    showAlertModal('Please enter a valid amount', 'error');
     return;
   }
 
@@ -1602,13 +1678,13 @@ async function handleEditExpenseSubmit(expenseId: number) {
     }
 
     if (splits.length === 0) {
-      alert('Please enter at least one split amount');
+      showAlertModal('Please enter at least one split amount', 'error');
       return;
     }
 
     const totalSplits = splits.reduce((sum, split) => sum + split.amount, 0);
     if (Math.abs(totalSplits - amount) > 0.01) {
-      alert(`Split amounts ($${totalSplits.toFixed(2)}) must equal expense amount ($${amount.toFixed(2)})`);
+      showAlertModal(`Split amounts ($${totalSplits.toFixed(2)}) must equal expense amount ($${amount.toFixed(2)})`, 'error');
       return;
     }
   } else {
@@ -1616,7 +1692,7 @@ async function handleEditExpenseSubmit(expenseId: number) {
     const checkboxes = document.querySelectorAll('.edit-participant-checkbox:checked') as NodeListOf<HTMLInputElement>;
 
     if (checkboxes.length === 0) {
-      alert('Please select at least one participant to split with');
+      showAlertModal('Please select at least one participant to split with', 'error');
       return;
     }
 
@@ -1644,9 +1720,9 @@ async function handleEditExpenseSubmit(expenseId: number) {
     await loadTripData(state.currentSlug);
   } catch (error) {
     if (error instanceof ApiError) {
-      alert(`Failed to update expense: ${error.message}`);
+      showAlertModal(`Failed to update expense: ${error.message}`, 'error');
     } else {
-      alert('Failed to update expense. Please try again.');
+      showAlertModal('Failed to update expense. Please try again.', 'error');
     }
   }
 }
