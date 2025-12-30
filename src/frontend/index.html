@@ -11,6 +11,12 @@
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
+  <!-- Offline Status Banner -->
+  <div id="offline-banner" class="offline-banner">
+    <span class="offline-icon">&#x26A0;</span>
+    <span id="offline-message">You're offline</span>
+  </div>
+
   <div id="app">
     <!-- Landing Page -->
     <section id="landing" class="view active">
@@ -264,5 +270,20 @@
   </div>
 
   <script type="module" src="./app.ts"></script>
+
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(registration => {
+            console.log('SW registered:', registration.scope);
+          })
+          .catch(error => {
+            console.log('SW registration failed:', error);
+          });
+      });
+    }
+  </script>
 </body>
 </html>
