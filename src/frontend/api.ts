@@ -323,3 +323,51 @@ export async function getSimplifiedDebts(slug: string): Promise<SimplifiedDebt[]
 export async function getEvents(slug: string): Promise<EventLog[]> {
   return apiFetch<EventLog[]>(`/api/trips/${slug}/events`, {}, true);
 }
+
+// Export Operations
+
+export interface TripExportData {
+  exportedAt: string;
+  trip: {
+    name: string;
+    slug: string;
+    createdAt: string;
+  };
+  participants: Array<{
+    id: number;
+    name: string;
+    createdAt: string;
+  }>;
+  expenses: Array<{
+    id: number;
+    description: string;
+    amount: number;
+    paidBy: { id: number; name: string };
+    expenseDate: string | null;
+    createdAt: string;
+    splits: Array<{ participantId: number; amount: number }>;
+  }>;
+  payments: Array<{
+    id: number;
+    from: { id: number; name: string };
+    to: { id: number; name: string };
+    amount: number;
+    createdAt: string;
+  }>;
+  balances: Array<{
+    participantId: number;
+    participantName: string;
+    paid: number;
+    owes: number;
+    net: number;
+  }>;
+  simplifiedDebts: Array<{
+    from: { id: number; name: string };
+    to: { id: number; name: string };
+    amount: number;
+  }>;
+}
+
+export async function exportTripData(slug: string): Promise<TripExportData> {
+  return apiFetch<TripExportData>(`/api/trips/${slug}/export`, {}, true);
+}
