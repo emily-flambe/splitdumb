@@ -10,6 +10,7 @@ import payments from './api/payments';
 import balances from './api/balances';
 import events from './api/events';
 import admin from './api/admin';
+import errors from './api/errors';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -36,6 +37,7 @@ app.route('/api/trips/:slug/payments', payments);
 app.route('/api/trips/:slug/balances', balances);
 app.route('/api/trips/:slug/events', events);
 app.route('/api/admin', admin);
+app.route('/api/errors', errors);
 
 // 404 handler
 app.notFound((c) => {
@@ -44,7 +46,15 @@ app.notFound((c) => {
 
 // Error handler
 app.onError((err, c) => {
-  console.error('Error:', err);
+  // Log detailed error context to Cloudflare Workers logs
+  console.error('API ERROR:', {
+    message: err.message,
+    stack: err.stack,
+    path: c.req.path,
+    method: c.req.method,
+    timestamp: new Date().toISOString(),
+  });
+  // Return generic error to client (don't expose stack traces)
   return c.json({ error: 'Internal server error' }, 500);
 });
 

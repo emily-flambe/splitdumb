@@ -1,4 +1,7 @@
 // src/frontend/app.ts
+// Initialize error tracking first to catch early errors
+import './error-tracking';
+
 declare const __APP_VERSION__: string;
 
 import type { TripWithParticipants, Participant, ExpenseWithSplits, Balance, SimplifiedDebt, PaymentWithNames, EventLog } from '../types';
