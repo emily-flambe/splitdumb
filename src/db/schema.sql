@@ -70,6 +70,17 @@ CREATE TABLE IF NOT EXISTS event_logs (
   FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
 );
 
+-- Recovery emails for trip access restoration
+CREATE TABLE IF NOT EXISTS recovery_emails (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  trip_id INTEGER NOT NULL,
+  email TEXT NOT NULL,
+  verified INTEGER DEFAULT 0,
+  created_at INTEGER DEFAULT (unixepoch()),
+  FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE,
+  UNIQUE(trip_id, email)
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_participants_trip ON participants(trip_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_trip ON expenses(trip_id);
@@ -78,3 +89,5 @@ CREATE INDEX IF NOT EXISTS idx_trips_slug ON trips(slug);
 CREATE INDEX IF NOT EXISTS idx_payments_trip ON payments(trip_id);
 CREATE INDEX IF NOT EXISTS idx_event_logs_trip ON event_logs(trip_id);
 CREATE INDEX IF NOT EXISTS idx_event_logs_created ON event_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_recovery_emails_trip ON recovery_emails(trip_id);
+CREATE INDEX IF NOT EXISTS idx_recovery_emails_email ON recovery_emails(email);

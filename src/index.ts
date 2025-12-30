@@ -12,6 +12,7 @@ import events from './api/events';
 import exportData from './api/export';
 import admin from './api/admin';
 import errors from './api/errors';
+import recovery, { tripRecovery } from './api/recovery';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -58,6 +59,8 @@ app.route('/api/trips/:slug/events', events);
 app.route('/api/trips/:slug/export', exportData);
 app.route('/api/admin', admin);
 app.route('/api/errors', errors);
+app.route('/api/trips/:slug/recovery', tripRecovery);
+app.route('/api/recovery', recovery);
 
 // 404 handler
 app.notFound((c) => {

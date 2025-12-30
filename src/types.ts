@@ -52,6 +52,14 @@ export interface EventLog {
   created_at: number;
 }
 
+export interface RecoveryEmail {
+  id: number;
+  trip_id: number;
+  email: string;
+  verified: number;
+  created_at: number;
+}
+
 // API request types
 
 export interface CreateTripRequest {
@@ -93,6 +101,14 @@ export interface CreatePaymentRequest {
 
 export interface UpdatePaymentRequest {
   amount: number;
+}
+
+export interface AddRecoveryEmailRequest {
+  email: string;
+}
+
+export interface RecoveryRequest {
+  email: string;
 }
 
 // API response types

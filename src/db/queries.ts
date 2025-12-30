@@ -564,3 +564,68 @@ export async function getEventLogsByTrip(db: D1Database, tripId: number): Promis
     return [];
   }
 }
+
+// ============================================================================
+// RECOVERY EMAILS
+// ============================================================================
+
+export interface RecoveryEmail {
+  id: number;
+  trip_id: number;
+  email: string;
+  verified: number;
+  created_at: number;
+}
+
+export async function addRecoveryEmail(
+  db: D1Database,
+  tripId: number,
+  email: string
+): Promise<RecoveryEmail> {
+  const now = Math.floor(Date.now() / 1000);
+  const result = await db.prepare(
+    'INSERT INTO recovery_emails (trip_id, email, created_at) VALUES (?, ?, ?)'
+  ).bind(tripId, email.toLowerCase().trim(), now).run();
+
+  return {
+    id: result.meta.last_row_id as number,
+    trip_id: tripId,
+    email: email.toLowerCase().trim(),
+    verified: 0,
+    created_at: now
+  };
+}
+
+export async function getRecoveryEmailsByTrip(db: D1Database, tripId: number): Promise<RecoveryEmail[]> {
+  try {
+    const result = await db.prepare(
+      'SELECT * FROM recovery_emails WHERE trip_id = ? ORDER BY created_at DESC'
+    ).bind(tripId).all<RecoveryEmail>();
+    return result.results || [];
+  } catch (error) {
+    console.error('Error fetching recovery emails:', error);
+    return [];
+  }
+}
+
+export async function getTripsByRecoveryEmail(db: D1Database, email: string): Promise<Trip[]> {
+  try {
+    const result = await db.prepare(
+      `SELECT t.* FROM trips t
+       INNER JOIN recovery_emails re ON t.id = re.trip_id
+       WHERE re.email = ?
+       ORDER BY t.updated_at DESC`
+    ).bind(email.toLowerCase().trim()).all<Trip>();
+    return result.results || [];
+  } catch (error) {
+    console.error('Error fetching trips by recovery email:', error);
+    return [];
+  }
+}
+
+export async function deleteRecoveryEmail(db: D1Database, tripId: number, email: string): Promise<boolean> {
+  const result = await db.prepare(
+    'DELETE FROM recovery_emails WHERE trip_id = ? AND email = ?'
+  ).bind(tripId, email.toLowerCase().trim()).run();
+  return result.success && (result.meta.changes || 0) > 0;
+}
