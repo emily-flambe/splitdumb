@@ -13,11 +13,33 @@ import type {
   UpdatePaymentRequest,
 } from '../types';
 
+import {
+  isOnline,
+  queueMutation,
+  getPendingMutations,
+  clearMutation,
+  cacheTrip,
+  getCachedTrip,
+  cacheExpenses,
+  getCachedExpenses,
+  cachePayments,
+  getCachedPayments,
+  cacheBalances,
+  getCachedBalances,
+  cacheDebts,
+  getCachedDebts,
+  cacheEvents,
+  getCachedEvents,
+  onConnectionChange,
+  type MutationType,
+} from './offline';
+
 // Custom error class for API errors
 export class ApiError extends Error {
   constructor(
     public status: number,
-    message: string
+    message: string,
+    public isOffline = false
   ) {
     super(message);
     this.name = 'ApiError';
@@ -48,6 +70,20 @@ export function getCredentials(): Credentials | null {
 
 export function clearCredentials(): void {
   localStorage.removeItem(CREDENTIALS_KEY);
+}
+
+// Sync status tracking
+type SyncCallback = (syncing: boolean, pendingCount: number) => void;
+const syncCallbacks: Set<SyncCallback> = new Set();
+let isSyncing = false;
+
+export function onSyncStatusChange(callback: SyncCallback): () => void {
+  syncCallbacks.add(callback);
+  return () => syncCallbacks.delete(callback);
+}
+
+function notifySyncStatus(syncing: boolean, pendingCount: number): void {
+  syncCallbacks.forEach((cb) => cb(syncing, pendingCount));
 }
 
 // Base fetch wrapper with error handling
@@ -104,12 +140,73 @@ async function apiFetch<T>(
     }
     // Handle network errors
     if (error instanceof TypeError) {
-      throw new ApiError(0, 'Network error - please check your connection');
+      throw new ApiError(0, 'Network error - please check your connection', true);
     }
     // Handle other errors
     throw new ApiError(500, 'An unexpected error occurred');
   }
 }
+
+// Sync pending mutations when back online
+export async function syncPendingMutations(): Promise<{ success: number; failed: number }> {
+  if (isSyncing) return { success: 0, failed: 0 };
+  if (!isOnline()) return { success: 0, failed: 0 };
+
+  const mutations = await getPendingMutations();
+  if (mutations.length === 0) return { success: 0, failed: 0 };
+
+  isSyncing = true;
+  notifySyncStatus(true, mutations.length);
+
+  let success = 0;
+  let failed = 0;
+
+  for (const mutation of mutations) {
+    try {
+      const credentials = getCredentials();
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (credentials) {
+        headers['X-Trip-Password'] = credentials.password;
+      }
+
+      const response = await fetch(mutation.endpoint, {
+        method: mutation.method,
+        headers,
+        body: mutation.body ? JSON.stringify(mutation.body) : undefined,
+      });
+
+      if (response.ok) {
+        await clearMutation(mutation.id);
+        success++;
+      } else {
+        // If it's a 4xx error (client error), remove it from queue
+        // as retrying won't help (e.g., deleting something already deleted)
+        if (response.status >= 400 && response.status < 500) {
+          await clearMutation(mutation.id);
+        }
+        failed++;
+      }
+    } catch {
+      // Network error - keep in queue for retry
+      failed++;
+    }
+  }
+
+  isSyncing = false;
+  const remaining = await getPendingMutations();
+  notifySyncStatus(false, remaining.length);
+
+  return { success, failed };
+}
+
+// Auto-sync when coming back online
+onConnectionChange(async (online) => {
+  if (online) {
+    await syncPendingMutations();
+  }
+});
 
 // Trip Operations
 
@@ -117,6 +214,7 @@ export async function createTrip(
   name: string,
   isTest = false
 ): Promise<{ slug: string; password: string; name: string }> {
+  // Trip creation requires network - can't create trips offline
   const result = await apiFetch<{ slug: string; password: string; name: string }>(
     '/api/trips',
     {
@@ -133,6 +231,7 @@ export async function authTrip(
   slug: string,
   password: string
 ): Promise<{ success: true; name: string }> {
+  // Auth requires network - can't auth offline
   const result = await apiFetch<{ success: true; name: string }>(
     `/api/trips/${slug}/auth`,
     {
@@ -146,7 +245,19 @@ export async function authTrip(
 }
 
 export async function getTrip(slug: string): Promise<TripWithParticipants> {
-  return apiFetch<TripWithParticipants>(`/api/trips/${slug}`, {}, true);
+  try {
+    const trip = await apiFetch<TripWithParticipants>(`/api/trips/${slug}`, {}, true);
+    // Cache the trip data
+    await cacheTrip(slug, trip);
+    return trip;
+  } catch (error) {
+    // If offline or network error, try cache
+    if (error instanceof ApiError && (error.isOffline || error.status === 0)) {
+      const cached = await getCachedTrip(slug);
+      if (cached) return cached;
+    }
+    throw error;
+  }
 }
 
 export async function updateTrip(
@@ -189,6 +300,26 @@ export async function deleteTrip(slug: string): Promise<{ success: true; message
 // Participant Operations
 
 export async function addParticipant(slug: string, name: string): Promise<Participant> {
+  if (!isOnline()) {
+    // Queue for later sync
+    await queueMutation({
+      type: 'addParticipant' as MutationType,
+      slug,
+      endpoint: `/api/trips/${slug}/participants`,
+      method: 'POST',
+      body: { name },
+    });
+    // Return a placeholder participant (will be synced later)
+    const pending = await getPendingMutations();
+    notifySyncStatus(false, pending.length);
+    return {
+      id: -Date.now(), // Negative ID indicates pending
+      trip_id: 0,
+      name,
+      created_at: Date.now(),
+    };
+  }
+
   return apiFetch<Participant>(
     `/api/trips/${slug}/participants`,
     {
@@ -203,6 +334,18 @@ export async function deleteParticipant(
   slug: string,
   participantId: number
 ): Promise<{ success: true; message: string }> {
+  if (!isOnline()) {
+    await queueMutation({
+      type: 'deleteParticipant' as MutationType,
+      slug,
+      endpoint: `/api/trips/${slug}/participants/${participantId}`,
+      method: 'DELETE',
+    });
+    const pending = await getPendingMutations();
+    notifySyncStatus(false, pending.length);
+    return { success: true, message: 'Queued for sync' };
+  }
+
   return apiFetch<{ success: true; message: string }>(
     `/api/trips/${slug}/participants/${participantId}`,
     {
@@ -215,13 +358,54 @@ export async function deleteParticipant(
 // Expense Operations
 
 export async function getExpenses(slug: string): Promise<ExpenseWithSplits[]> {
-  return apiFetch<ExpenseWithSplits[]>(`/api/trips/${slug}/expenses`, {}, true);
+  try {
+    const expenses = await apiFetch<ExpenseWithSplits[]>(`/api/trips/${slug}/expenses`, {}, true);
+    await cacheExpenses(slug, expenses);
+    return expenses;
+  } catch (error) {
+    if (error instanceof ApiError && (error.isOffline || error.status === 0)) {
+      const cached = await getCachedExpenses(slug);
+      if (cached) return cached;
+    }
+    throw error;
+  }
 }
 
 export async function createExpense(
   slug: string,
   expense: CreateExpenseRequest
 ): Promise<ExpenseWithSplits> {
+  if (!isOnline()) {
+    await queueMutation({
+      type: 'createExpense' as MutationType,
+      slug,
+      endpoint: `/api/trips/${slug}/expenses`,
+      method: 'POST',
+      body: expense,
+    });
+    const pending = await getPendingMutations();
+    notifySyncStatus(false, pending.length);
+    // Return a placeholder expense
+    return {
+      id: -Date.now(),
+      trip_id: 0,
+      description: expense.description,
+      amount: expense.amount,
+      paid_by: expense.paid_by,
+      expense_date: expense.expense_date ?? null,
+      created_at: Date.now(),
+      updated_at: Date.now(),
+      splits: expense.splits.map((s, i) => ({
+        id: -Date.now() - i,
+        expense_id: -Date.now(),
+        participant_id: s.participant_id,
+        amount: s.amount,
+      })),
+      payer_name: 'Pending sync...',
+      split_participant_names: [],
+    };
+  }
+
   return apiFetch<ExpenseWithSplits>(
     `/api/trips/${slug}/expenses`,
     {
@@ -237,6 +421,32 @@ export async function updateExpense(
   expenseId: number,
   expense: UpdateExpenseRequest
 ): Promise<ExpenseWithSplits> {
+  if (!isOnline()) {
+    await queueMutation({
+      type: 'updateExpense' as MutationType,
+      slug,
+      endpoint: `/api/trips/${slug}/expenses/${expenseId}`,
+      method: 'PUT',
+      body: expense,
+    });
+    const pending = await getPendingMutations();
+    notifySyncStatus(false, pending.length);
+    // Return placeholder
+    return {
+      id: expenseId,
+      trip_id: 0,
+      description: expense.description ?? '',
+      amount: expense.amount ?? 0,
+      paid_by: expense.paid_by ?? 0,
+      expense_date: expense.expense_date ?? null,
+      created_at: Date.now(),
+      updated_at: Date.now(),
+      splits: [],
+      payer_name: 'Pending sync...',
+      split_participant_names: [],
+    };
+  }
+
   return apiFetch<ExpenseWithSplits>(
     `/api/trips/${slug}/expenses/${expenseId}`,
     {
@@ -251,6 +461,18 @@ export async function deleteExpense(
   slug: string,
   expenseId: number
 ): Promise<{ success: true; message: string }> {
+  if (!isOnline()) {
+    await queueMutation({
+      type: 'deleteExpense' as MutationType,
+      slug,
+      endpoint: `/api/trips/${slug}/expenses/${expenseId}`,
+      method: 'DELETE',
+    });
+    const pending = await getPendingMutations();
+    notifySyncStatus(false, pending.length);
+    return { success: true, message: 'Queued for sync' };
+  }
+
   return apiFetch<{ success: true; message: string }>(
     `/api/trips/${slug}/expenses/${expenseId}`,
     {
@@ -263,13 +485,45 @@ export async function deleteExpense(
 // Payment Operations
 
 export async function getPayments(slug: string): Promise<PaymentWithNames[]> {
-  return apiFetch<PaymentWithNames[]>(`/api/trips/${slug}/payments`, {}, true);
+  try {
+    const payments = await apiFetch<PaymentWithNames[]>(`/api/trips/${slug}/payments`, {}, true);
+    await cachePayments(slug, payments);
+    return payments;
+  } catch (error) {
+    if (error instanceof ApiError && (error.isOffline || error.status === 0)) {
+      const cached = await getCachedPayments(slug);
+      if (cached) return cached;
+    }
+    throw error;
+  }
 }
 
 export async function createPayment(
   slug: string,
   payment: CreatePaymentRequest
 ): Promise<PaymentWithNames> {
+  if (!isOnline()) {
+    await queueMutation({
+      type: 'createPayment' as MutationType,
+      slug,
+      endpoint: `/api/trips/${slug}/payments`,
+      method: 'POST',
+      body: payment,
+    });
+    const pending = await getPendingMutations();
+    notifySyncStatus(false, pending.length);
+    return {
+      id: -Date.now(),
+      trip_id: 0,
+      from_participant_id: payment.from_participant_id,
+      to_participant_id: payment.to_participant_id,
+      amount: payment.amount,
+      created_at: Date.now(),
+      from_participant_name: 'Pending sync...',
+      to_participant_name: 'Pending sync...',
+    };
+  }
+
   return apiFetch<PaymentWithNames>(
     `/api/trips/${slug}/payments`,
     {
@@ -285,6 +539,28 @@ export async function updatePayment(
   paymentId: number,
   payment: UpdatePaymentRequest
 ): Promise<PaymentWithNames> {
+  if (!isOnline()) {
+    await queueMutation({
+      type: 'updatePayment' as MutationType,
+      slug,
+      endpoint: `/api/trips/${slug}/payments/${paymentId}`,
+      method: 'PUT',
+      body: payment,
+    });
+    const pending = await getPendingMutations();
+    notifySyncStatus(false, pending.length);
+    return {
+      id: paymentId,
+      trip_id: 0,
+      from_participant_id: 0,
+      to_participant_id: 0,
+      amount: payment.amount,
+      created_at: Date.now(),
+      from_participant_name: 'Pending sync...',
+      to_participant_name: 'Pending sync...',
+    };
+  }
+
   return apiFetch<PaymentWithNames>(
     `/api/trips/${slug}/payments/${paymentId}`,
     {
@@ -299,6 +575,18 @@ export async function deletePayment(
   slug: string,
   paymentId: number
 ): Promise<{ success: true; message: string }> {
+  if (!isOnline()) {
+    await queueMutation({
+      type: 'deletePayment' as MutationType,
+      slug,
+      endpoint: `/api/trips/${slug}/payments/${paymentId}`,
+      method: 'DELETE',
+    });
+    const pending = await getPendingMutations();
+    notifySyncStatus(false, pending.length);
+    return { success: true, message: 'Queued for sync' };
+  }
+
   return apiFetch<{ success: true; message: string }>(
     `/api/trips/${slug}/payments/${paymentId}`,
     {
@@ -311,17 +599,47 @@ export async function deletePayment(
 // Balance Operations
 
 export async function getBalances(slug: string): Promise<Balance[]> {
-  return apiFetch<Balance[]>(`/api/trips/${slug}/balances`, {}, true);
+  try {
+    const balances = await apiFetch<Balance[]>(`/api/trips/${slug}/balances`, {}, true);
+    await cacheBalances(slug, balances);
+    return balances;
+  } catch (error) {
+    if (error instanceof ApiError && (error.isOffline || error.status === 0)) {
+      const cached = await getCachedBalances(slug);
+      if (cached) return cached;
+    }
+    throw error;
+  }
 }
 
 export async function getSimplifiedDebts(slug: string): Promise<SimplifiedDebt[]> {
-  return apiFetch<SimplifiedDebt[]>(`/api/trips/${slug}/balances/simplified`, {}, true);
+  try {
+    const debts = await apiFetch<SimplifiedDebt[]>(`/api/trips/${slug}/balances/simplified`, {}, true);
+    await cacheDebts(slug, debts);
+    return debts;
+  } catch (error) {
+    if (error instanceof ApiError && (error.isOffline || error.status === 0)) {
+      const cached = await getCachedDebts(slug);
+      if (cached) return cached;
+    }
+    throw error;
+  }
 }
 
 // Event Log Operations
 
 export async function getEvents(slug: string): Promise<EventLog[]> {
-  return apiFetch<EventLog[]>(`/api/trips/${slug}/events`, {}, true);
+  try {
+    const events = await apiFetch<EventLog[]>(`/api/trips/${slug}/events`, {}, true);
+    await cacheEvents(slug, events);
+    return events;
+  } catch (error) {
+    if (error instanceof ApiError && (error.isOffline || error.status === 0)) {
+      const cached = await getCachedEvents(slug);
+      if (cached) return cached;
+    }
+    throw error;
+  }
 }
 
 // Export Operations

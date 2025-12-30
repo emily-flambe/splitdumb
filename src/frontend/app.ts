@@ -29,7 +29,10 @@ import {
   saveCredentials,
   clearCredentials,
   ApiError,
+  syncPendingMutations,
+  onSyncStatusChange,
 } from './api';
+import { isOnline, onConnectionChange, getPendingMutationCount } from './offline';
 
 // Admin types
 interface AdminTrip {
@@ -1858,5 +1861,100 @@ function formatRelativeTime(date: Date): string {
 
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
+
+// Offline UI management
+const offlineBanner = document.getElementById('offline-banner') as HTMLDivElement;
+const offlineMessage = document.getElementById('offline-message') as HTMLSpanElement;
+
+function updateOfflineUI(online: boolean, syncing = false, pendingCount = 0) {
+  if (!offlineBanner || !offlineMessage) return;
+
+  if (!online) {
+    // Show offline banner
+    offlineBanner.classList.add('visible');
+    offlineBanner.classList.remove('syncing');
+    document.body.classList.add('offline-mode');
+
+    if (pendingCount > 0) {
+      offlineMessage.textContent = `You're offline (${pendingCount} pending change${pendingCount > 1 ? 's' : ''})`;
+    } else {
+      offlineMessage.textContent = "You're offline";
+    }
+
+    // Update icon to warning
+    const iconEl = offlineBanner.querySelector('.offline-icon');
+    if (iconEl) {
+      iconEl.innerHTML = '&#x26A0;';
+    }
+  } else if (syncing) {
+    // Show syncing banner
+    offlineBanner.classList.add('visible', 'syncing');
+    document.body.classList.add('offline-mode');
+    offlineMessage.textContent = `Syncing ${pendingCount} change${pendingCount > 1 ? 's' : ''}...`;
+
+    // Show spinner
+    const iconEl = offlineBanner.querySelector('.offline-icon');
+    if (iconEl) {
+      iconEl.innerHTML = '<div class="sync-spinner"></div>';
+    }
+  } else if (pendingCount > 0) {
+    // Online but has pending mutations
+    offlineBanner.classList.add('visible');
+    offlineBanner.classList.remove('syncing');
+    document.body.classList.add('offline-mode');
+    offlineMessage.textContent = `${pendingCount} pending change${pendingCount > 1 ? 's' : ''} to sync`;
+
+    const iconEl = offlineBanner.querySelector('.offline-icon');
+    if (iconEl) {
+      iconEl.innerHTML = '&#x26A0;';
+    }
+  } else {
+    // Online and no pending mutations - hide banner
+    offlineBanner.classList.remove('visible', 'syncing');
+    document.body.classList.remove('offline-mode');
+  }
+}
+
+// Initialize offline status
+async function initOfflineUI() {
+  const online = isOnline();
+  const pendingCount = await getPendingMutationCount();
+  updateOfflineUI(online, false, pendingCount);
+
+  // Listen for connection changes
+  onConnectionChange(async (nowOnline) => {
+    if (nowOnline) {
+      // Try to sync when coming back online
+      const pending = await getPendingMutationCount();
+      if (pending > 0) {
+        updateOfflineUI(true, true, pending);
+      }
+    } else {
+      const pending = await getPendingMutationCount();
+      updateOfflineUI(false, false, pending);
+    }
+  });
+
+  // Listen for sync status changes
+  onSyncStatusChange((syncing, pendingCount) => {
+    updateOfflineUI(isOnline(), syncing, pendingCount);
+
+    // If sync completed and we're viewing a trip, reload data
+    if (!syncing && pendingCount === 0 && state.currentSlug) {
+      loadTripData(state.currentSlug);
+    }
+  });
+
+  // Try to sync any pending mutations on startup
+  if (online) {
+    const pending = await getPendingMutationCount();
+    if (pending > 0) {
+      syncPendingMutations();
+    }
+  }
+}
+
+// Initialize offline UI
+initOfflineUI();
 
 export {};
