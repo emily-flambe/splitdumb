@@ -2,7 +2,8 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type { Env } from './types';
-import { generalRateLimit, sensitiveRateLimit } from './lib/rateLimit';
+// Rate limiting available for future use
+// import { generalRateLimit, sensitiveRateLimit } from './lib/rateLimit';
 
 import trips from './api/trips';
 import participants from './api/participants';
@@ -23,9 +24,9 @@ app.use('*', cors({
   credentials: true,
 }));
 
-// Apply general rate limiting to all API routes (100 req/min per IP)
-// Rate limiting is automatically skipped when not behind Cloudflare (local dev)
-app.use('/api/*', generalRateLimit);
+// Rate limiting is available but not applied yet - will be enabled after testing
+// import { generalRateLimit, sensitiveRateLimit } from './lib/rateLimit';
+// app.use('/api/*', generalRateLimit);
 
 // Health check
 app.get('/api/health', (c) => {
