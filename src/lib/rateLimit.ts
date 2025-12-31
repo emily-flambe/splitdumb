@@ -48,8 +48,8 @@ export function rateLimit(
   return async (c, next) => {
     // Skip rate limiting in local dev (when not behind Cloudflare)
     // In production, Cloudflare always sets CF-Connecting-IP header
-    const isBehindCloudflare = c.req.header('cf-connecting-ip');
-    if (!isBehindCloudflare) {
+    const cfConnectingIp = c.req.header('cf-connecting-ip');
+    if (!cfConnectingIp || cfConnectingIp === '') {
       await next();
       return;
     }

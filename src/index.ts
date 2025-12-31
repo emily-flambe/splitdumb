@@ -24,11 +24,11 @@ app.use('*', cors({
 }));
 
 // Apply general rate limiting to all API routes (100 req/min per IP)
+// Rate limiting is automatically skipped when not behind Cloudflare (local dev)
 app.use('/api/*', generalRateLimit);
 
 // Apply stricter rate limiting to sensitive operations (10 req/min per IP)
-// This is applied before the general rate limit for trip creation
-app.post('/api/trips', sensitiveRateLimit);
+app.use('/api/trips', sensitiveRateLimit);
 
 // Health check
 app.get('/api/health', (c) => {
