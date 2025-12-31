@@ -27,9 +27,6 @@ app.use('*', cors({
 // Rate limiting is automatically skipped when not behind Cloudflare (local dev)
 app.use('/api/*', generalRateLimit);
 
-// Apply stricter rate limiting to sensitive operations (10 req/min per IP)
-app.use('/api/trips', sensitiveRateLimit);
-
 // Health check
 app.get('/api/health', (c) => {
   return c.json({
