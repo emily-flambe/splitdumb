@@ -11,10 +11,6 @@ export default defineConfig({
     baseURL: process.env.BASE_URL || 'https://splitdumb.emilycogsdill.com',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    // Bypass rate limiting during E2E tests (only works in local dev, not production)
-    extraHTTPHeaders: {
-      'x-test-bypass-ratelimit': 'true',
-    },
   },
   projects: [
     {

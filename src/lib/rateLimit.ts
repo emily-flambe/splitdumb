@@ -46,11 +46,10 @@ export function rateLimit(
   let lastCleanup = Date.now();
 
   return async (c, next) => {
-    // Bypass rate limiting for E2E tests (only works in local dev, not production)
-    // The header is only honored when CF-Connecting-IP is missing (i.e., not behind Cloudflare)
+    // Skip rate limiting in local dev (when not behind Cloudflare)
+    // In production, Cloudflare always sets CF-Connecting-IP header
     const isBehindCloudflare = c.req.header('cf-connecting-ip');
-    const testBypass = c.req.header('x-test-bypass-ratelimit');
-    if (!isBehindCloudflare && testBypass === 'true') {
+    if (!isBehindCloudflare) {
       await next();
       return;
     }
