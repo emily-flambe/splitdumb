@@ -1494,6 +1494,8 @@ body.offline-mode {
   font-weight: 600;
   text-transform: uppercase;
   margin-left: var(--space-sm);
+}
+
 /* Settings Info Section */
 .settings-divider {
   height: 1px;
@@ -1572,4 +1574,4 @@ body.offline-mode {
 .data-info-credentials .btn {
   margin-top: var(--space-sm);
   width: 100%;
->>>>>>> 2a458f9 (feat: add clear messaging about anonymous data storage)
+}
