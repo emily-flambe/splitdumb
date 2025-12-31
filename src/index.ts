@@ -2,6 +2,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type { Env } from './types';
+import { generalRateLimit } from './lib/rateLimit';
 
 import trips from './api/trips';
 import participants from './api/participants';
@@ -21,6 +22,10 @@ app.use('*', cors({
   origin: '*',
   credentials: true,
 }));
+
+// Apply general rate limiting to all API routes
+// Automatically bypassed when not behind Cloudflare (local dev/CI)
+app.use('/api/*', generalRateLimit);
 
 // Health check
 app.get('/api/health', (c) => {
