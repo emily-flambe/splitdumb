@@ -47,11 +47,12 @@ export function rateLimit(
 
   return async (c, next) => {
     // Skip rate limiting in local dev (when not behind Cloudflare)
-    // In production, Cloudflare always sets CF-Connecting-IP header
+    // In production, Cloudflare sets CF-Connecting-IP to real client IPs
+    // In local dev (wrangler), it's set to localhost (::1 or 127.0.0.1)
     const cfConnectingIp = c.req.header('cf-connecting-ip');
-    console.log(`[RateLimit] cf-connecting-ip: "${cfConnectingIp}", path: ${c.req.path}`);
-    if (!cfConnectingIp || cfConnectingIp === '') {
-      console.log('[RateLimit] Bypassing - not behind Cloudflare');
+    const isLocalDev = !cfConnectingIp || cfConnectingIp === '' ||
+                       cfConnectingIp === '::1' || cfConnectingIp === '127.0.0.1';
+    if (isLocalDev) {
       await next();
       return;
     }
