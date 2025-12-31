@@ -44,6 +44,9 @@ interface AdminTrip {
   updated_at: number;
 }
 
+// Local storage keys
+const DATA_INFO_SEEN_KEY = 'splitdumb_seen_data_info';
+
 // State management
 interface AppState {
   currentView: 'landing' | 'trip' | 'admin';
@@ -226,6 +229,12 @@ async function handleCreateTrip() {
     // Show credentials after a short delay to let the trip view load
     setTimeout(() => {
       showCredentialsModal(result.slug, result.password, true);
+      // Show data info modal after credentials if user hasn't seen it (skip in test mode)
+      if (!isTestTrip && !hasSeenDataInfo()) {
+        setTimeout(() => {
+          showDataInfoModal();
+        }, 300);
+      }
     }, 500);
   } catch (error) {
     if (error instanceof ApiError) {
@@ -1074,6 +1083,97 @@ function showPasswordEntryModal(slug: string) {
   observer.observe(modalOverlay, { attributes: true, attributeFilter: ['style'] });
 }
 
+// Data info tracking
+function hasSeenDataInfo(): boolean {
+  return localStorage.getItem(DATA_INFO_SEEN_KEY) === 'true';
+}
+
+function markDataInfoSeen() {
+  localStorage.setItem(DATA_INFO_SEEN_KEY, 'true');
+}
+
+function showDataInfoModal() {
+  const credentials = getCredentials();
+  const credentialsSection = credentials
+    ? `
+      <div class="data-info-credentials">
+        <p><strong>Your current trip credentials:</strong></p>
+        <div class="credential-display">
+          <div class="label">Trip URL</div>
+          <div class="value">https://splitdumb.emilycogsdill.com/${escapeHtml(credentials.slug)}</div>
+        </div>
+        <div class="credential-display">
+          <div class="label">Password</div>
+          <div class="value">${escapeHtml(credentials.password)}</div>
+        </div>
+        <button class="btn btn-secondary" id="data-info-copy-btn">Copy Credentials</button>
+      </div>
+    `
+    : '';
+
+  showModal(
+    'How Your Data Is Stored',
+    `
+    <div class="data-info-content">
+      <div class="data-info-item">
+        <span class="data-info-icon">&#128190;</span>
+        <div>
+          <h4>Stored on our servers</h4>
+          <p>Your trip data (participants, expenses, payments) is saved on our servers so you and your friends can access it from any device.</p>
+        </div>
+      </div>
+      <div class="data-info-item">
+        <span class="data-info-icon">&#128273;</span>
+        <div>
+          <h4>Access tied to credentials</h4>
+          <p>Your access is linked to the trip URL and password. If you clear your browser data, uninstall the app, or switch devices, you'll need these credentials to log back in.</p>
+        </div>
+      </div>
+      <div class="data-info-item">
+        <span class="data-info-icon">&#128203;</span>
+        <div>
+          <h4>Save your credentials</h4>
+          <p>We recommend copying your trip URL and password somewhere safe. Share them with friends who need access to the trip.</p>
+        </div>
+      </div>
+    </div>
+    ${credentialsSection}
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="data-info-ok-btn">Got It</button>
+    </div>
+  `
+  );
+
+  document.getElementById('data-info-ok-btn')?.addEventListener('click', () => {
+    markDataInfoSeen();
+    hideModal();
+  });
+
+  document.getElementById('data-info-copy-btn')?.addEventListener('click', () => {
+    if (!credentials) return;
+    const shareMessage = `Join my trip on SplitDumb!
+
+https://splitdumb.emilycogsdill.com/${credentials.slug}
+Password: ${credentials.password}`;
+
+    navigator.clipboard.writeText(shareMessage).then(() => {
+      const btn = document.getElementById('data-info-copy-btn');
+      if (btn) {
+        btn.textContent = 'Copied!';
+        setTimeout(() => {
+          btn.textContent = 'Copy Credentials';
+        }, 2000);
+      }
+    });
+  });
+
+  // Also override modal close to mark as seen
+  const closeHandler = () => {
+    markDataInfoSeen();
+  };
+  modalClose.addEventListener('click', closeHandler, { once: true });
+}
+
 function showCredentialsModal(slug: string, password: string, isNewTrip = false) {
   const title = isNewTrip ? 'Trip Created!' : 'Trip Credentials';
   const intro = isNewTrip
@@ -1181,6 +1281,12 @@ function showSettingsModal() {
       </div>
       <span class="arrow">→</span>
     </div>
+    <div class="settings-divider"></div>
+    <div class="settings-info-section">
+      <h3>About Your Data</h3>
+      <p>Your trip data is stored on our servers and linked to this device. If you clear browser data or switch devices, you'll need the trip URL and password to regain access.</p>
+      <button class="btn btn-secondary btn-small" id="settings-data-info">Learn More</button>
+    </div>
     <div class="settings-version">
       Version ${__APP_VERSION__}
     </div>
@@ -1192,6 +1298,10 @@ function showSettingsModal() {
   document.getElementById('settings-view-credentials')?.addEventListener('click', handleViewCredentialsSetting);
   document.getElementById('settings-export')?.addEventListener('click', handleExportDataSetting);
   document.getElementById('settings-delete')?.addEventListener('click', handleDeleteTripSetting);
+  document.getElementById('settings-data-info')?.addEventListener('click', () => {
+    hideModal();
+    showDataInfoModal();
+  });
 }
 
 async function handleRenameTripSetting() {
