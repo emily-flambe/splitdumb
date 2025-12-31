@@ -49,7 +49,9 @@ export function rateLimit(
     // Skip rate limiting in local dev (when not behind Cloudflare)
     // In production, Cloudflare always sets CF-Connecting-IP header
     const cfConnectingIp = c.req.header('cf-connecting-ip');
+    console.log(`[RateLimit] cf-connecting-ip: "${cfConnectingIp}", path: ${c.req.path}`);
     if (!cfConnectingIp || cfConnectingIp === '') {
+      console.log('[RateLimit] Bypassing - not behind Cloudflare');
       await next();
       return;
     }
