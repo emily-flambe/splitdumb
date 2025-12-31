@@ -229,8 +229,8 @@ async function handleCreateTrip() {
     // Show credentials after a short delay to let the trip view load
     setTimeout(() => {
       showCredentialsModal(result.slug, result.password, true);
-      // Show data info modal after credentials if user hasn't seen it
-      if (!hasSeenDataInfo()) {
+      // Show data info modal after credentials if user hasn't seen it (skip in test mode)
+      if (!isTestTrip && !hasSeenDataInfo()) {
         setTimeout(() => {
           showDataInfoModal();
         }, 300);
