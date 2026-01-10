@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "deny": [
+      "**/.env*",
+      "**/.dev.vars",
+      "**/secrets.*",
+      "**/credentials.*",
+      "**/*.pem",
+      "**/*.key"
+    ]
+  },
+  "hooks": {
+    "postToolUse": [
+      {
+        "matcher": "(Write|Edit)",
+        "path": "**/*.ts",
+        "commands": ["npx tsc --noEmit"]
+      }
+    ]
+  }
+}
